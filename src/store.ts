@@ -3,6 +3,7 @@ import { createJSONStorage, persist, type StateStorage } from 'zustand/middlewar
 import { del, get, set } from 'idb-keyval'
 import type { FurnitureItem, Opening, Panorama, PlanImage, Project, Room, RoomPhoto, Vec2 } from './types'
 import { clampOpening, normalizeWinding, rectangleCorners } from './geometry/plan'
+import { PRESETS } from './furniture/presets'
 
 export type Step = 'room' | 'photo' | 'decorate' | 'tour'
 export type Selection =
@@ -28,7 +29,17 @@ export const defaultRoom = (): Room => ({
   ceiling: { color: '#f5f3f0', roughness: 0.95 },
 })
 
-const emptyProject = (): Project => ({ room: defaultRoom(), planImage: null, photos: [], furniture: [] })
+/** What a first-time visitor sees: the sample room already furnished as a princess room, ready to explore. */
+const sampleProject = (): Project => {
+  const room = defaultRoom()
+  const sample = PRESETS[0].build(room)
+  return {
+    room: { ...room, ...sample.room },
+    planImage: null,
+    photos: [],
+    furniture: sample.furniture.map((f) => ({ ...f, id: uid() })),
+  }
+}
 
 type State = {
   project: Project
@@ -83,8 +94,8 @@ export const useStore = create<State>()(
       const mutate = (fn: (p: Project) => Project) => setState((s) => ({ project: fn(s.project) }))
 
       return {
-        project: emptyProject(),
-        step: 'room',
+        project: sampleProject(),
+        step: 'decorate',
         selection: null,
         past: [],
         future: [],
@@ -107,7 +118,7 @@ export const useStore = create<State>()(
         setProject: (project) => setState({ project }),
         resetProject: () => {
           getState().checkpoint()
-          setState({ project: emptyProject(), selection: null })
+          setState({ project: sampleProject(), selection: null })
         },
 
         updateRoom: (patch) =>
@@ -177,6 +188,15 @@ export const useStore = create<State>()(
       name: 'interior-3d-room:project',
       storage: createJSONStorage(() => idbStorage),
       partialize: (s) => ({ project: s.project, step: s.step }),
+      // v1: projects saved empty before the sample room existed open with the sample instead.
+      version: 1,
+      migrate: (persisted, version) => {
+        const state = persisted as { project: Project; step: Step }
+        if (version < 1 && !state.project.furniture.length && !state.project.photos.length) {
+          return { project: sampleProject(), step: 'decorate' as Step }
+        }
+        return state
+      },
     },
   ),
 )
