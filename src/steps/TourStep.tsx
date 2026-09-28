@@ -5,6 +5,8 @@ import { LOOKS, captureWithLook, lookById } from '../scene/filters'
 import { useStore } from '../store'
 import { PhotorealOverlay, type PhotorealMode } from '../render/PhotorealOverlay'
 import { PanoTour } from '../render/PanoTour'
+import { AiPhotoOverlay } from '../render/AiPhotoOverlay'
+import { snapshotForAi } from '../render/aiPhoto'
 
 /** On-screen stick for phones and tablets. Writes into the shared `joystick` input the tour reads each frame. */
 function Joystick() {
@@ -55,6 +57,12 @@ export function TourStep({ capture, lookId, setLookId }: {
   const panoCount = useStore((s) => s.project.panoramas?.length ?? 0)
   const [tracing, setTracing] = useState<PhotorealMode | null>(null)
   const [vr, setVr] = useState(false)
+  const [ai, setAi] = useState<{ layout: string; width: number; height: number } | null>(null)
+  const select = useStore((s) => s.select)
+  const openAi = async () => {
+    const v = capture.current
+    if (v) setAi(await snapshotForAi(v.snapshot, () => select(null)))
+  }
   const save = () => {
     const canvas = capture.current?.snapshot()
     if (!canvas) return
@@ -68,19 +76,23 @@ export function TourStep({ capture, lookId, setLookId }: {
       <Viewport mode="tour" editable={false} lookId={lookId} capture={capture} />
       <div className="tour-help">드래그로 둘러보기 · <b>W A S D</b> / 방향키로 걷기</div>
       <div className="tour-bar">
-        {LOOKS.map((l) => (
-          <button key={l.id} className={lookId === l.id ? 'on' : ''} onClick={() => setLookId(l.id)}>
-            {l.name}
-          </button>
-        ))}
+        <button className="shot main" onClick={openAi}>📸 사진처럼 만들기 (AI)</button>
+        <button onClick={() => capture.current && setTracing('view')}>✨ 실사 렌더</button>
+        <button onClick={() => capture.current && setTracing('pano')}>📷 여기서 360°</button>
+        <button disabled={!panoCount} onClick={() => setVr(true)}>🥽 VR 투어 ({panoCount})</button>
+        <select value={lookId} onChange={(e) => setLookId(e.target.value)} aria-label="화면 필터">
+          {LOOKS.map((l) => (
+            <option key={l.id} value={l.id}>
+              필터: {l.name}
+            </option>
+          ))}
+        </select>
         <button onClick={save}>화면 저장</button>
-        <button className="shot" onClick={() => capture.current && setTracing('view')}>✨ 실사 사진</button>
-        <button className="shot" onClick={() => capture.current && setTracing('pano')}>📷 여기서 360° 찍기</button>
-        <button className="shot" disabled={!panoCount} onClick={() => setVr(true)}>🥽 VR 투어 ({panoCount})</button>
       </div>
       <Joystick />
       {tracing && capture.current && <PhotorealOverlay view={capture.current} mode={tracing} onClose={() => setTracing(null)} />}
       {vr && <PanoTour onClose={() => setVr(false)} />}
+      {ai && <AiPhotoOverlay {...ai} onClose={() => setAi(null)} />}
     </main>
   )
 }

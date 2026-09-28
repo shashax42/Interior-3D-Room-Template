@@ -6,6 +6,8 @@ import { centroid } from '../geometry/plan'
 import { mountOf } from '../furniture/catalog'
 import { buildTraceScene, equirectCameraAt, startTrace, type TraceJob } from './photoreal'
 import { denoiseCanvas, denoiserAvailable, warmUpDenoiser } from './denoise'
+import { AiPhotoOverlay } from './AiPhotoOverlay'
+import { canvasToJpeg } from './aiPhoto'
 
 export type PhotorealMode = 'view' | 'pano'
 
@@ -29,6 +31,7 @@ export function PhotorealOverlay({ view, mode, onClose }: { view: ViewHandle; mo
   const [phase, setPhase] = useState<Phase>('tracing')
   const [saved, setSaved] = useState(false)
   const [exposure, setExposure] = useState(1)
+  const [ai, setAi] = useState<{ layout: string; width: number; height: number } | null>(null)
   const target = SAMPLES[mode]
 
   const show = (canvas: HTMLCanvasElement) => {
@@ -145,9 +148,22 @@ export function PhotorealOverlay({ view, mode, onClose }: { view: ViewHandle; mo
             {saved ? 'VR 투어에 추가됨 ✓' : 'VR 투어에 추가'}
           </button>
         )}
+        {mode === 'view' && (
+          <button
+            className="btn primary"
+            disabled={phase !== 'done'}
+            onClick={() => {
+              const c = result()
+              setAi({ layout: canvasToJpeg(c), width: c.width, height: c.height })
+            }}
+          >
+            📸 AI로 사진처럼
+          </button>
+        )}
         <button className="btn" disabled={phase === 'denoising'} onClick={download}>이미지 저장</button>
         <button className="btn" onClick={onClose}>닫기</button>
       </div>
+      {ai && <AiPhotoOverlay {...ai} onClose={() => setAi(null)} />}
       {phase === 'tracing' && samples < 6 && <p className="trace-hint">처음엔 자글자글하다가 점점 선명해져요. 보통 30초~2분 걸려요.</p>}
     </div>
   )

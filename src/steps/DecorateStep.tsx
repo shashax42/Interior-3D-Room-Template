@@ -1,4 +1,5 @@
 import { useRef, useState, type MutableRefObject } from 'react'
+import * as THREE from 'three'
 import { useStore } from '../store'
 import type { FurnitureItem, RoomPhoto } from '../types'
 import { CATALOG, CATEGORIES, isSmall, mountOf, type CatalogEntry, type Category } from '../furniture/catalog'
@@ -10,6 +11,8 @@ import { Viewport, type ViewHandle } from '../scene/Viewport'
 import { LOOKS, captureWithLook, lookById } from '../scene/filters'
 import { CmField, ColorField, Section } from '../ui/fields'
 import { PhotorealOverlay } from '../render/PhotorealOverlay'
+import { AiPhotoOverlay } from '../render/AiPhotoOverlay'
+import { snapshotForAi } from '../render/aiPhoto'
 
 function ItemPanel({ item }: { item: FurnitureItem }) {
   const room = useStore((s) => s.project.room)
@@ -89,6 +92,16 @@ export function DecorateStep({ photoView, setPhotoView, capture, lookId, setLook
   const [cat, setCat] = useState<Category>('프린세스')
   const [uploading, setUploading] = useState(false)
   const [tracing, setTracing] = useState(false)
+  const [ai, setAi] = useState<{ layout: string; roomPhoto?: string; width: number; height: number } | null>(null)
+  const openAi = async () => {
+    const v = capture.current
+    if (!v) return
+    const shot = await snapshotForAi(v.snapshot, () => select(null))
+    // Standing exactly where a room photo was taken: furnish that real photo instead of inventing the room.
+    const cam = photoView?.camera
+    const atPhoto = cam && v.camera.position.distanceTo(new THREE.Vector3(...cam.position)) < 0.05
+    setAi({ ...shot, roomPhoto: atPhoto ? photoView!.dataUrl : undefined })
+  }
   const fileRef = useRef<HTMLInputElement>(null)
   const { room, furniture, photos } = project
   const selected = selection?.type === 'furniture' ? furniture.find((f) => f.id === selection.id) : undefined
@@ -204,7 +217,7 @@ export function DecorateStep({ photoView, setPhotoView, capture, lookId, setLook
           </div>
         </Section>
 
-        <Section title="사진 톤">
+        <Section title="사진으로 뽑기">
           <div className="seg small">
             {LOOKS.map((l) => (
               <button key={l.id} className={lookId === l.id ? 'on' : ''} onClick={() => setLookId(l.id)}>
@@ -212,15 +225,21 @@ export function DecorateStep({ photoView, setPhotoView, capture, lookId, setLook
               </button>
             ))}
           </div>
-          <button className="btn primary" onClick={() => capture.current && setTracing(true)}>✨ 실사 사진으로 렌더</button>
-          <button className="btn" onClick={savePicture}>지금 화면 그대로 저장</button>
-          <p className="hint">실사 렌더는 창문으로 들어오는 햇빛과 벽에 반사되는 빛까지 계산해서, 찍은 사진처럼 만들어요.</p>
+          <button className="btn primary" onClick={openAi}>📸 사진처럼 만들기 (AI)</button>
+          <p className="hint">
+            눈높이 시점(룸투어, 또는 위의 "사진 시점")에서 누르면 진짜 찍은 사진처럼 나와요. 실제 방 사진 시점이면 그 사진 속 방에 가구를 들여요.
+          </p>
+          <div className="row">
+            <button className="btn" onClick={() => capture.current && setTracing(true)}>✨ 실사 렌더</button>
+            <button className="btn" onClick={savePicture}>화면 저장</button>
+          </div>
         </Section>
       </aside>
       <main className="main">
         <Viewport mode="orbit" editable photoView={photoView} lookId={lookId} capture={capture} />
       </main>
       {tracing && capture.current && <PhotorealOverlay view={capture.current} mode="view" onClose={() => setTracing(false)} />}
+      {ai && <AiPhotoOverlay {...ai} onClose={() => setAi(null)} />}
     </>
   )
 }
