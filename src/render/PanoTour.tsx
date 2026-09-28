@@ -97,6 +97,8 @@ export function PanoTour({ onClose }: { onClose: () => void }) {
   const removePanorama = useStore((s) => s.removePanorama)
   const [currentId, setCurrentId] = useState(panoramas[0]?.id)
   const [fading, setFading] = useState(false)
+  // Deleting takes two taps on the ×: the first arms it.
+  const [armed, setArmed] = useState<string | null>(null)
   const current = panoramas.find((p) => p.id === currentId) ?? panoramas[0]
 
   const go = (p: Panorama) => {
@@ -134,13 +136,14 @@ export function PanoTour({ onClose }: { onClose: () => void }) {
               <span>{i + 1}</span>
             </button>
             <button
-              className="x"
-              title="이 사진 지우기"
+              className={armed === p.id ? 'x armed' : 'x'}
+              title={armed === p.id ? '한 번 더 누르면 지워져요' : '이 사진 지우기'}
               onClick={() => {
-                if (confirm('이 360° 사진을 지울까요?')) removePanorama(p.id)
+                if (armed === p.id) removePanorama(p.id)
+                else setArmed(p.id)
               }}
             >
-              ×
+              {armed === p.id ? '삭제' : '×'}
             </button>
           </div>
         ))}

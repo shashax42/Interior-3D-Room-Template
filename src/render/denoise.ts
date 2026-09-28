@@ -1,4 +1,4 @@
-import { initUNetFromURL, type UNet } from 'oidn-web'
+import { initUNetFromBuffer, type UNet } from 'oidn-web'
 
 /**
  * AI denoising (Intel Open Image Denoise, run on the GPU through WebGPU). A path-traced image is grainy until
@@ -10,8 +10,17 @@ let unet: Promise<UNet> | null = null
 
 export const denoiserAvailable = () => typeof navigator !== 'undefined' && 'gpu' in navigator
 
+// The weights ship base64-encoded in JSON: the hosted link only serves standard web file types.
+async function fetchWeights() {
+  const r = await fetch(`${import.meta.env.BASE_URL}weights/rt_ldr.json`)
+  if (!r.ok) throw new Error(`denoiser weights: ${r.status}`)
+  const { data } = (await r.json()) as { data: string }
+  const bytes = Uint8Array.from(atob(data), (c) => c.charCodeAt(0))
+  return bytes.buffer
+}
+
 function loadUNet() {
-  unet ??= initUNetFromURL(`${import.meta.env.BASE_URL}weights/rt_ldr.tza`)
+  unet ??= fetchWeights().then((buf) => initUNetFromBuffer(buf))
   return unet
 }
 

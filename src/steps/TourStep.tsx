@@ -3,6 +3,7 @@ import { Viewport, type ViewHandle } from '../scene/Viewport'
 import { joystick } from '../scene/TourControls'
 import { LOOKS, captureWithLook, lookById } from '../scene/filters'
 import { useStore } from '../store'
+import { saveImage } from '../ui/SaveSheet'
 import { PhotorealOverlay, type PhotorealMode } from '../render/PhotorealOverlay'
 import { PanoTour } from '../render/PanoTour'
 import { AiPhotoOverlay } from '../render/AiPhotoOverlay'
@@ -66,10 +67,7 @@ export function TourStep({ capture, lookId, setLookId }: {
   const save = () => {
     const canvas = capture.current?.snapshot()
     if (!canvas) return
-    const a = document.createElement('a')
-    a.href = captureWithLook(canvas, lookById(lookId))
-    a.download = `${name || 'room'}-tour.png`
-    a.click()
+    saveImage(captureWithLook(canvas, lookById(lookId)), `${name || 'room'}-tour.png`)
   }
   return (
     <main className="main tour">

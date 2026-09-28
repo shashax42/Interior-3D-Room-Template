@@ -8,6 +8,7 @@ import { buildTraceScene, equirectCameraAt, startTrace, type TraceJob } from './
 import { denoiseCanvas, denoiserAvailable, warmUpDenoiser } from './denoise'
 import { AiPhotoOverlay } from './AiPhotoOverlay'
 import { canvasToJpeg } from './aiPhoto'
+import { saveImage } from '../ui/SaveSheet'
 
 export type PhotorealMode = 'view' | 'pano'
 
@@ -117,10 +118,7 @@ export function PhotorealOverlay({ view, mode, onClose }: { view: ViewHandle; mo
   const result = () => shown.current ?? job.current!.canvas
 
   const download = () => {
-    const a = document.createElement('a')
-    a.href = result().toDataURL('image/jpeg', 0.95)
-    a.download = `${room.name || 'room'}${mode === 'pano' ? '-360' : ''}.jpg`
-    a.click()
+    saveImage(result().toDataURL('image/jpeg', 0.95), `${room.name || 'room'}${mode === 'pano' ? '-360' : ''}.jpg`)
   }
 
   const keepPano = () => {

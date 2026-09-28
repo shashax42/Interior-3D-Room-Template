@@ -10,6 +10,7 @@ import { centroid } from '../geometry/plan'
 import { Viewport, type ViewHandle } from '../scene/Viewport'
 import { LOOKS, captureWithLook, lookById } from '../scene/filters'
 import { CmField, ColorField, Section } from '../ui/fields'
+import { saveImage } from '../ui/SaveSheet'
 import { PhotorealOverlay } from '../render/PhotorealOverlay'
 import { AiPhotoOverlay } from '../render/AiPhotoOverlay'
 import { snapshotForAi } from '../render/aiPhoto'
@@ -91,6 +92,8 @@ export function DecorateStep({ photoView, setPhotoView, capture, lookId, setLook
   const setProject = useStore((s) => s.setProject)
   const [cat, setCat] = useState<Category>('프린세스')
   const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [applied, setApplied] = useState<string | null>(null)
   const [tracing, setTracing] = useState(false)
   const [ai, setAi] = useState<{ layout: string; roomPhoto?: string; width: number; height: number } | null>(null)
   const openAi = async () => {
@@ -116,6 +119,7 @@ export function DecorateStep({ photoView, setPhotoView, capture, lookId, setLook
 
   const onModel = async (file: File) => {
     setUploading(true)
+    setUploadError(null)
     try {
       const { modelId, size } = await importModelFile(file)
       checkpoint()
@@ -132,14 +136,13 @@ export function DecorateStep({ photoView, setPhotoView, capture, lookId, setLook
       })
       select({ type: 'furniture', id })
     } catch (err) {
-      alert(`3D 파일을 읽지 못했어요: ${(err as Error).message}`)
+      setUploadError(`3D 파일을 읽지 못했어요 (${(err as Error).message}). .glb 파일인지 확인해주세요.`)
     } finally {
       setUploading(false)
     }
   }
 
   const applyPreset = (p: Preset) => {
-    if (furniture.length && !confirm(`지금 있는 가구를 지우고 "${p.name}" 스타일로 꾸밀까요? (되돌리기 가능)`)) return
     checkpoint()
     const preset = p.build(room)
     setProject({
@@ -148,15 +151,13 @@ export function DecorateStep({ photoView, setPhotoView, capture, lookId, setLook
       furniture: preset.furniture.map((f, i) => ({ ...f, id: `p${Date.now().toString(36)}${i}` })),
     })
     select(null)
+    setApplied(p.name)
   }
 
   const savePicture = () => {
     const canvas = capture.current?.snapshot()
     if (!canvas) return
-    const a = document.createElement('a')
-    a.href = captureWithLook(canvas, lookById(lookId))
-    a.download = `${room.name || 'room'}.png`
-    a.click()
+    saveImage(captureWithLook(canvas, lookById(lookId)), `${room.name || 'room'}.png`)
   }
 
   return (
@@ -193,9 +194,13 @@ export function DecorateStep({ photoView, setPhotoView, capture, lookId, setLook
           <button className="btn" disabled={uploading} onClick={() => fileRef.current?.click()}>
             {uploading ? '불러오는 중…' : '내 3D 가구 파일 올리기 (.glb)'}
           </button>
+          {uploadError && <p className="warn">{uploadError}</p>}
         </Section>
 
-        <Section title="스타일로 한 번에 꾸미기" hint="방 모양·문·창문에 맞춰 배치돼요. 그다음 하나씩 바꿔보세요.">
+        <Section
+          title="스타일로 한 번에 꾸미기"
+          hint={applied ? `"${applied}"로 꾸몄어요. 마음에 안 들면 위쪽 ↶ 버튼으로 되돌릴 수 있어요.` : '지금 있는 가구 대신 방 모양·문·창문에 맞춰 새로 배치해요.'}
+        >
           <div className="presets">
             {PRESETS.map((p) => (
               <button key={p.id} className={`preset preset-${p.id}`} onClick={() => applyPreset(p)}>

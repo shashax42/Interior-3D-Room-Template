@@ -72,4 +72,4 @@ npm run build     # 타입 검사 + 프로덕션 빌드
 
 ## 서드파티 에셋
 
-- `public/weights/rt_ldr.tza`: [Open Image Denoise](https://github.com/RenderKit/oidn-weights) 가중치 (Apache-2.0, `public/weights/LICENSE.txt`)
+- `public/weights/rt_ldr.json`: [Open Image Denoise](https://github.com/RenderKit/oidn-weights) `rt_ldr.tza` 가중치를 base64로 담은 것 (Apache-2.0, `public/weights/LICENSE.txt`)

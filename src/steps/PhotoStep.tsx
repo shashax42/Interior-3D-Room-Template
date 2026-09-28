@@ -60,7 +60,7 @@ function PhotoSide({ photo, setSelectedId, active, setActive, solve, setSolve, o
   }
 
   const pinCount = photo ? Object.keys(photo.pins).length : 0
-  const fit = solve?.photoId === photo?.id && solve?.fit
+  const fit = !!(solve && photo && solve.photoId === photo.id && solve.fit)
   const need = fit ? 5 : 4
   const result = solve && solve.photoId === photo?.id ? solve.result : null
   const stretch = fit && result ? result.stretch : null
@@ -240,7 +240,7 @@ export function PhotoStep({ onPreview }: { onPreview: (photo: RoomPhoto) => void
   const [active, setActive] = useState<string | null>(null)
   const [solve, setSolveState] = useState<PhotoSolveState | null>(null)
   const photo = photos.find((p) => p.id === selectedId) ?? photos[0] ?? null
-  const fit = solve?.photoId === photo?.id ? solve.fit : false
+  const fit = solve && photo && solve.photoId === photo.id ? solve.fit : false
 
   const run = (photoId: string, fitDims: boolean) => setSolveState({ photoId, fit: fitDims, result: solvePhoto(photoId, fitDims) })
 

@@ -7,6 +7,8 @@ import { DecorateStep } from './steps/DecorateStep'
 import { TourStep } from './steps/TourStep'
 import { mountOf } from './furniture/catalog'
 import type { ViewHandle } from './scene/Viewport'
+import { ErrorBoundary } from './ui/ErrorBoundary'
+import { SaveSheet } from './ui/SaveSheet'
 
 const STEPS: { id: Step; label: string }[] = [
   { id: 'room', label: '방 만들기' },
@@ -85,6 +87,7 @@ export default function App() {
         </div>
       </header>
       <div className="body">
+        <ErrorBoundary key={step} onReset={() => setStep('room')}>
         {step === 'room' && <RoomStep />}
         {step === 'photo' && (
           <PhotoStep
@@ -98,7 +101,9 @@ export default function App() {
           <DecorateStep photoView={photoView} setPhotoView={setPhotoView} capture={capture} lookId={lookId} setLookId={setLookId} />
         )}
         {step === 'tour' && <TourStep capture={capture} lookId={lookId} setLookId={setLookId} />}
+        </ErrorBoundary>
       </div>
+      <SaveSheet />
     </div>
   )
 }
