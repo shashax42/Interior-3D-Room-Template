@@ -14,7 +14,7 @@ export function Lighting({ room, photoLit }: { room: Room; photoLit: boolean }) 
     const pmrem = new THREE.PMREMGenerator(gl)
     const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
     scene.environment = env
-    scene.environmentIntensity = 0.45
+    scene.environmentIntensity = 0.35
     return () => {
       env.dispose()
       pmrem.dispose()
@@ -39,11 +39,11 @@ export function Lighting({ room, photoLit }: { room: Room; photoLit: boolean }) 
   return (
     <>
       <primitive object={target} position={[c.x, 0, c.z]} />
-      <hemisphereLight args={['#fff6ee', '#d9cfc6', photoLit ? 0.5 : 0.9]} />
+      <hemisphereLight args={['#fff6ee', '#cfc3ba', photoLit ? 0.5 : 0.7]} />
       <directionalLight
         position={sun}
         target={target}
-        intensity={photoLit ? 0.8 : 1.6}
+        intensity={photoLit ? 0.8 : 1.3}
         color="#fff1e0"
         castShadow
         shadow-mapSize={[2048, 2048]}

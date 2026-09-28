@@ -1,16 +1,14 @@
 import { useRef, useState, type MutableRefObject } from 'react'
 import { useStore } from '../store'
 import type { FurnitureItem, RoomPhoto } from '../types'
-import { CATALOG, mountOf, type CatalogEntry } from '../furniture/catalog'
-import { newItem, romanticBedroom } from '../furniture/presets'
+import { CATALOG, CATEGORIES, isSmall, mountOf, type CatalogEntry, type Category } from '../furniture/catalog'
+import { PRESETS, newItem, type Preset } from '../furniture/presets'
 import { initialPlacement } from '../furniture/placement'
 import { importModelFile } from '../furniture/CustomModel'
 import { centroid } from '../geometry/plan'
 import { Viewport } from '../scene/Viewport'
 import { LOOKS, captureWithLook, lookById } from '../scene/filters'
 import { CmField, ColorField, Section } from '../ui/fields'
-
-const CATEGORIES = ['침실', '거실', '수납', '조명', '장식'] as const
 
 function ItemPanel({ item }: { item: FurnitureItem }) {
   const room = useStore((s) => s.project.room)
@@ -87,7 +85,7 @@ export function DecorateStep({ photoView, setPhotoView, capture, lookId, setLook
   const select = useStore((s) => s.select)
   const checkpoint = useStore((s) => s.checkpoint)
   const setProject = useStore((s) => s.setProject)
-  const [cat, setCat] = useState<(typeof CATEGORIES)[number]>('침실')
+  const [cat, setCat] = useState<Category>('프린세스')
   const [uploading, setUploading] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const { room, furniture, photos } = project
@@ -96,7 +94,7 @@ export function DecorateStep({ photoView, setPhotoView, capture, lookId, setLook
   const addFromCatalog = (e: CatalogEntry) => {
     checkpoint()
     const base = { ...newItem(e), id: '' }
-    const placed = initialPlacement(base, room, centroid(room.corners))
+    const placed = initialPlacement(base, room, centroid(room.corners), furniture, selected)
     const id = addFurniture({ ...newItem(e), ...placed })
     select({ type: 'furniture', id })
   }
@@ -125,10 +123,10 @@ export function DecorateStep({ photoView, setPhotoView, capture, lookId, setLook
     }
   }
 
-  const applyPreset = () => {
-    if (furniture.length && !confirm('지금 있는 가구를 지우고 예시 스타일로 꾸밀까요?')) return
+  const applyPreset = (p: Preset) => {
+    if (furniture.length && !confirm(`지금 있는 가구를 지우고 "${p.name}" 스타일로 꾸밀까요? (되돌리기 가능)`)) return
     checkpoint()
-    const preset = romanticBedroom(room)
+    const preset = p.build(room)
     setProject({
       ...project,
       room: { ...room, ...preset.room },
@@ -150,7 +148,14 @@ export function DecorateStep({ photoView, setPhotoView, capture, lookId, setLook
     <>
       <aside className="side">
         {selected && <ItemPanel item={selected} />}
-        <Section title="가구 추가" hint="누르면 방 가운데에 놓여요. 실제 치수(cm)로 바꿀 수 있어요.">
+        <Section
+          title="가구 추가"
+          hint={
+            selected && !isSmall(selected)
+              ? '캔들·인형·스탠드는 선택한 가구 위에 올라가요. 나머지는 방 가운데에 놓여요.'
+              : '누르면 방 가운데에 놓여요. 실제 치수(cm)로 바꿀 수 있어요.'
+          }
+        >
           <div className="seg small">
             {CATEGORIES.map((c) => (
               <button key={c} className={cat === c ? 'on' : ''} onClick={() => setCat(c)}>
@@ -175,8 +180,15 @@ export function DecorateStep({ photoView, setPhotoView, capture, lookId, setLook
           </button>
         </Section>
 
-        <Section title="스타일 예시">
-          <button className="btn" onClick={applyPreset}>로맨틱 빈티지 침실로 꾸며보기</button>
+        <Section title="스타일로 한 번에 꾸미기" hint="방 모양·문·창문에 맞춰 배치돼요. 그다음 하나씩 바꿔보세요.">
+          <div className="presets">
+            {PRESETS.map((p) => (
+              <button key={p.id} className={`preset preset-${p.id}`} onClick={() => applyPreset(p)}>
+                <strong>{p.name}</strong>
+                <small>{p.description}</small>
+              </button>
+            ))}
+          </div>
         </Section>
 
         <Section title="시점">

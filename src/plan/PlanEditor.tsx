@@ -181,7 +181,7 @@ export function PlanEditor({ tool, setTool }: { tool: PlanTool; setTool: (t: Pla
     } else if (d.type === 'furniture') {
       const item = furniture.find((f) => f.id === d.id)
       if (!item) return
-      updateFurniture(item.id, placeAt(item, { x: p.x + d.offset.x, z: p.z + d.offset.z }, room))
+      updateFurniture(item.id, placeAt(item, { x: p.x + d.offset.x, z: p.z + d.offset.z }, room, furniture))
     }
   }
 

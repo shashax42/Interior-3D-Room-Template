@@ -4,12 +4,13 @@ import { RoundedBox } from '@react-three/drei'
 import { Reflector } from 'three/examples/jsm/objects/Reflector.js'
 import type { FurnitureItem } from '../types'
 import { GOLD } from './catalog'
+import { Cotton, PrincessModel } from './princess'
 
 // Every model is built inside the box [-w/2, w/2] × [0, h] × [-d/2, d/2], with its front facing +z.
 
 type P = { item: FurnitureItem }
 
-const Fabric = ({ color }: { color: string }) => <meshStandardMaterial color={color} roughness={0.95} />
+const Fabric = Cotton
 const Wood = ({ color }: { color: string }) => <meshStandardMaterial color={color} roughness={0.55} />
 const Metal = ({ color = GOLD }: { color?: string }) => <meshStandardMaterial color={color} metalness={1} roughness={0.28} />
 
@@ -470,6 +471,6 @@ export function ProceduralModel({ item }: P) {
     case 'plant': return <Plant item={item} />
     case 'curtain': return <Curtain item={item} />
     case 'frame': return <Frame item={item} />
-    default: return null
+    default: return <PrincessModel item={item} />
   }
 }

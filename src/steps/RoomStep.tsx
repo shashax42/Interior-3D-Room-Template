@@ -6,6 +6,8 @@ import { PlanEditor, type PlanTool } from '../plan/PlanEditor'
 import { Viewport } from '../scene/Viewport'
 import { readImage } from '../photo/imageFile'
 import { CmField, ColorField, Section } from '../ui/fields'
+import { defaultTrim } from '../scene/Trim'
+import type { Trim } from '../types'
 
 function SelectionPanel() {
   const room = useStore((s) => s.project.room)
@@ -171,7 +173,9 @@ function RoomSide({ tool, setTool }: { tool: PlanTool; setTool: (t: PlanTool) =>
         <CmField label="벽 두께" value={room.wallThickness} onChange={(wallThickness) => { checkpoint(); updateRoom({ wallThickness }) }} min={5} max={60} />
       </Section>
 
-      <Section title="4. 벽지·바닥">
+      <TrimSection />
+
+      <Section title="5. 벽지·바닥">
         <ColorField label="벽" value={room.wall.color} onChange={(color) => updateRoom({ wall: { ...room.wall, color } })} />
         <ColorField label="바닥" value={room.floor.color} onChange={(color) => updateRoom({ floor: { ...room.floor, color } })} />
         <ColorField label="천장" value={room.ceiling.color} onChange={(color) => updateRoom({ ceiling: { ...room.ceiling, color } })} />
@@ -205,5 +209,31 @@ export function RoomStep() {
         <RoomMain tool={tool} setTool={setTool} />
       </main>
     </>
+  )
+}
+
+function TrimSection() {
+  const room = useStore((s) => s.project.room)
+  const updateRoom = useStore((s) => s.updateRoom)
+  const trim = room.trim ?? defaultTrim()
+  const set = (patch: Partial<Trim>) => updateRoom({ trim: { ...trim, ...patch } })
+  const toggles: { key: keyof Omit<Trim, 'color'>; label: string }[] = [
+    { key: 'panels', label: '벽 몰딩 패널' },
+    { key: 'crown', label: '천장 몰딩' },
+    { key: 'baseboard', label: '걸레받이' },
+    { key: 'medallion', label: '천장 메달리온' },
+  ]
+  return (
+    <Section title="4. 벽 장식" hint="프렌치·프린세스 느낌의 절반은 몰딩이에요. 문·창문을 피해서 자동으로 나눠져요.">
+      <div className="toggles">
+        {toggles.map((t) => (
+          <label key={t.key} className="check">
+            <input type="checkbox" checked={trim[t.key]} onChange={(e) => set({ [t.key]: e.target.checked })} />
+            {t.label}
+          </label>
+        ))}
+      </div>
+      <ColorField label="몰딩 색" value={trim.color} onChange={(color) => set({ color })} />
+    </Section>
   )
 }

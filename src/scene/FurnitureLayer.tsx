@@ -4,7 +4,7 @@ import type { ThreeEvent } from '@react-three/fiber'
 import type { FurnitureItem, Room } from '../types'
 import { ProceduralModel } from '../furniture/models'
 import { CustomModel } from '../furniture/CustomModel'
-import { mountOf } from '../furniture/catalog'
+import { isSmall, mountOf } from '../furniture/catalog'
 import { placeAt, placeOnWall } from '../furniture/placement'
 import { useStore } from '../store'
 
@@ -41,7 +41,8 @@ export function FurnitureLayer({ room, items, editable, onDragChange }: {
   const drag = useRef<{ id: string; offset: { x: number; z: number }; moved: boolean } | null>(null)
 
   const planeFor = (item: FurnitureItem) => {
-    floorPlane.constant = mountOf(item) === 'ceiling' ? -item.elevation : 0
+    // Ceiling items and small items on top of furniture follow the cursor at their own height.
+    floorPlane.constant = mountOf(item) === 'ceiling' || isSmall(item) ? -item.elevation : 0
     return floorPlane
   }
 
@@ -70,7 +71,7 @@ export function FurnitureLayer({ room, items, editable, onDragChange }: {
     }
     const p = e.ray.intersectPlane(planeFor(item), hit)
     if (!p) return
-    update(item.id, placeAt(item, { x: p.x + d.offset.x, z: p.z + d.offset.z }, room))
+    update(item.id, placeAt(item, { x: p.x + d.offset.x, z: p.z + d.offset.z }, room, items))
   }
 
   const onUp = (e: ThreeEvent<PointerEvent>) => {

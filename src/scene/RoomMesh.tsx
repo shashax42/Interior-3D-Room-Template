@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef } from 'react'
 import * as THREE from 'three'
 import { useFrame, type ThreeEvent } from '@react-three/fiber'
-import type { Opening, Room } from '../types'
+import type { FurnitureItem, Opening, Room } from '../types'
 import { isConvexCorner, wallSegments, type WallSegment } from '../geometry/plan'
 import { ROOM_LAYER, withPhotoProjection } from './projectionShader'
 import { plankTexture } from './textures'
+import { Medallions, defaultTrim, wallTrimGeometry } from './Trim'
 
 /** Matrix that maps wall-local coordinates (x along the wall, y up, z into the room) to world space. */
 function wallFrame(w: WallSegment) {
@@ -119,6 +120,8 @@ function OpeningMesh({ room, wall, o, selected, onSelect }: {
 
 export type RoomMeshProps = {
   room: Room
+  /** Used to put ceiling rosettes above the chandeliers. */
+  furniture?: FurnitureItem[]
   /** Hide the ceiling and the walls between the camera and the room (dollhouse view). */
   cutaway: boolean
   selectedOpening?: string
@@ -127,7 +130,8 @@ export type RoomMeshProps = {
   onFloorPointer?: (e: ThreeEvent<PointerEvent>) => void
 }
 
-export function RoomMesh({ room, cutaway, selectedOpening, onWallPointer, onOpeningPointer, onFloorPointer }: RoomMeshProps) {
+export function RoomMesh({ room, furniture = [], cutaway, selectedOpening, onWallPointer, onOpeningPointer, onFloorPointer }: RoomMeshProps) {
+  const trim = room.trim ?? defaultTrim()
   const walls = useMemo(() => wallSegments(room.corners), [room.corners])
 
   const wallMat = useMemo(() => withPhotoProjection(new THREE.MeshStandardMaterial()), [])
@@ -157,8 +161,13 @@ export function RoomMesh({ room, cutaway, selectedOpening, onWallPointer, onOpen
   }, [room])
   useEffect(() => () => [...wallGeos, floorGeo, ceilGeo].forEach((g) => g.dispose()), [wallGeos, floorGeo, ceilGeo])
 
+  const trimMat = useMemo(() => new THREE.MeshStandardMaterial({ roughness: 0.55 }), [])
+  useEffect(() => void trimMat.color.set(trim.color), [trim.color, trimMat])
+  const trimGeos = useMemo(() => walls.map((w) => wallTrimGeometry(room, w, trim)), [room, walls, trim])
+  useEffect(() => () => trimGeos.forEach((g) => g?.dispose()), [trimGeos])
+
   const wallGroups = useRef<(THREE.Group | null)[]>([])
-  const ceilRef = useRef<THREE.Mesh>(null)
+  const ceilRef = useRef<THREE.Group>(null)
   const tmp = useMemo(() => new THREE.Vector3(), [])
   useFrame(({ camera }) => {
     if (ceilRef.current) ceilRef.current.visible = !cutaway || camera.position.y < room.height
@@ -185,7 +194,10 @@ export function RoomMesh({ room, cutaway, selectedOpening, onWallPointer, onOpen
         receiveShadow
         onPointerDown={onFloorPointer}
       />
-      <mesh ref={(m) => { ceilRef.current = m; enableRoomLayer(m) }} geometry={ceilGeo} material={ceilMat} />
+      <group ref={ceilRef}>
+        <mesh ref={enableRoomLayer} geometry={ceilGeo} material={ceilMat} />
+        {trim.medallion && <Medallions room={room} furniture={furniture} color={trim.color} />}
+      </group>
       {walls.map((w, i) => (
         <group key={i} ref={(g) => { wallGroups.current[i] = g }}>
           <mesh
@@ -195,6 +207,9 @@ export function RoomMesh({ room, cutaway, selectedOpening, onWallPointer, onOpen
             receiveShadow
             onPointerDown={onWallPointer ? (e) => onWallPointer(e, w) : undefined}
           />
+          {trimGeos[i] && (
+            <mesh geometry={trimGeos[i]!} material={trimMat} matrixAutoUpdate={false} matrix={wallFrame(w)} castShadow receiveShadow />
+          )}
           {room.openings
             .filter((o) => o.wall === i)
             .map((o) => (

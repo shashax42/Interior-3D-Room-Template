@@ -22,6 +22,18 @@ export type SurfaceFinish = {
   roughness: number
 }
 
+/** Architectural trim added on top of the plain walls: the details that make a room read as French or "princess". */
+export type Trim = {
+  color: string
+  /** Molded panels on the walls, with a chair rail between the lower and upper rows. */
+  panels: boolean
+  baseboard: boolean
+  /** Crown molding where the walls meet the ceiling. */
+  crown: boolean
+  /** Round plaster ornament on the ceiling above each chandelier (or the room's middle). */
+  medallion: boolean
+}
+
 export type Room = {
   name: string
   /** Inner outline of the room. Kept with positive signed area in (x, z) so the interior is left of every edge. */
@@ -32,6 +44,8 @@ export type Room = {
   wall: SurfaceFinish
   floor: SurfaceFinish
   ceiling: SurfaceFinish
+  /** Missing in projects saved before trim existed. */
+  trim?: Trim
 }
 
 /** A reference image the user traced the plan from. `scale` is meters per image pixel. */
@@ -84,6 +98,21 @@ export type FurnitureKind =
   | 'plant'
   | 'curtain'
   | 'frame'
+  | 'canopyBed'
+  | 'scallopBed'
+  | 'vanity'
+  | 'balloonCurtain'
+  | 'ornateMirror'
+  | 'candles'
+  | 'plush'
+  | 'bow'
+  | 'tableLamp'
+  | 'shagRug'
+  | 'louisChair'
+  | 'pedestal'
+  | 'bubbleChandelier'
+  | 'bench'
+  | 'fireplace'
   | 'custom'
 
 export type FurnitureItem = {

@@ -129,6 +129,7 @@ export function Viewport({ mode, editable, photoView, lookId = 'none', capture }
         <PhotoProjection />
         <RoomMesh
           room={room}
+          furniture={furniture}
           cutaway={mode === 'orbit'}
           selectedOpening={selection?.type === 'opening' ? selection.id : undefined}
           onFloorPointer={editable ? (e) => { if (e.button === 0 && !dragging) select(null) } : undefined}

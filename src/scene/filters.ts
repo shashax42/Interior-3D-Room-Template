@@ -3,7 +3,7 @@ export type Look = { id: string; name: string; css: string; vignette: number }
 
 export const LOOKS: Look[] = [
   { id: 'none', name: '원본', css: 'none', vignette: 0 },
-  { id: 'film', name: '따뜻한 필름', css: 'sepia(0.16) saturate(0.88) contrast(0.93) brightness(1.05)', vignette: 0.28 },
+  { id: 'film', name: '따뜻한 필름', css: 'sepia(0.14) saturate(0.95) contrast(0.98) brightness(0.99)', vignette: 0.28 },
   { id: 'pastel', name: '파스텔', css: 'saturate(0.78) contrast(0.88) brightness(1.08) hue-rotate(-6deg)', vignette: 0.15 },
   { id: 'mood', name: '저녁 무드', css: 'sepia(0.3) saturate(1.05) contrast(1.02) brightness(0.9)', vignette: 0.4 },
 ]

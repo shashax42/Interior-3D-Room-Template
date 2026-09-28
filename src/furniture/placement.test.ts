@@ -59,6 +59,16 @@ describe('placeAt', () => {
     expect(placed.rotation).toBe(along)
   })
 
+  it('sets small items on top of the furniture they are dropped on', () => {
+    const stand = item({ id: 'stand', kind: 'nightstand', position: { x: 1, z: 0 }, size: { w: 0.45, d: 0.4, h: 0.55 } })
+    const bed = item({ id: 'bed', kind: 'bed', position: { x: -1, z: 0 }, size: { w: 1.6, d: 2.1, h: 1.1 } })
+    const candle = item({ id: 'c', kind: 'candles', size: { w: 0.2, d: 0.1, h: 0.2 } })
+    expect(placeAt(candle, { x: 1.1, z: 0.05 }, room, [stand, bed]).elevation).toBeCloseTo(0.55)
+    // A bed's surface is its mattress, not the top of its headboard.
+    expect(placeAt(candle, { x: -1, z: 0.3 }, room, [stand, bed]).elevation).toBeCloseTo(0.62)
+    expect(placeAt(candle, { x: 0, z: 1 }, room, [stand, bed]).elevation).toBe(0)
+  })
+
   it('hangs ceiling items from the ceiling', () => {
     const placed = placeAt(item({ kind: 'chandelier', size: { w: 0.7, d: 0.7, h: 0.75 } }), { x: 0, z: 0 }, room)
     expect(placed.elevation).toBeCloseTo(2.4 - 0.75)

@@ -1,6 +1,6 @@
 import type { FurnitureItem, Room, Vec2 } from '../types'
 import { add, dot, nearestWall, scale, wallSegments } from '../geometry/plan'
-import { mountOf } from './catalog'
+import { isSmall, isSurface, mountOf, topOf } from './catalog'
 
 /** Rotation (around y) that turns an item's front (+z) toward a direction on the floor. */
 export const facing = (dir: Vec2) => Math.atan2(dir.x, dir.z)
@@ -10,11 +10,23 @@ const SNAP_ANGLE = Math.cos((20 * Math.PI) / 180)
 
 /**
  * Where an item ends up when dragged so that its center is over `target`.
- * Wall items stick to the nearest wall; floor items slide flush against a wall when their back is close to it
- * and they are already roughly facing away from it.
+ * Wall items stick to the nearest wall; small items (candles, plush) land on top of whatever they are dropped on;
+ * floor items slide flush against a wall when their back is close to it and they are already roughly facing
+ * away from it.
  */
-export function placeAt(item: FurnitureItem, target: Vec2, room: Room): Pick<FurnitureItem, 'position' | 'rotation' | 'elevation'> {
+export function placeAt(
+  item: FurnitureItem,
+  target: Vec2,
+  room: Room,
+  others: FurnitureItem[] = [],
+): Pick<FurnitureItem, 'position' | 'rotation' | 'elevation'> {
   const mount = mountOf(item)
+  if (isSmall(item)) {
+    const under = others
+      .filter((o) => o.id !== item.id && isSurface(o) && insideFootprint(target, o))
+      .reduce<FurnitureItem | null>((best, o) => (!best || topOf(o) > topOf(best) ? o : best), null)
+    return { position: target, rotation: item.rotation, elevation: under ? topOf(under) : 0 }
+  }
   if (mount === 'ceiling') {
     return { position: target, rotation: item.rotation, elevation: room.height - item.size.h }
   }
@@ -95,9 +107,20 @@ export function insideFootprint(p: Vec2, item: Pick<FurnitureItem, 'position' | 
   return Math.abs(lx) <= item.size.w / 2 + pad && Math.abs(lz) <= item.size.d / 2 + pad
 }
 
-/** A reasonable starting spot for a new item: the room's middle, or against the wall facing the camera. */
-export function initialPlacement(item: FurnitureItem, room: Room, at: Vec2): Pick<FurnitureItem, 'position' | 'rotation' | 'elevation'> {
-  const mount = mountOf(item)
-  if (mount === 'floor') return { position: at, rotation: 0, elevation: 0 }
-  return placeAt(item, at, room)
+/**
+ * A reasonable starting spot for a new item: on top of the selected furniture for small things,
+ * the room's middle for floor items, the nearest wall or the ceiling otherwise.
+ */
+export function initialPlacement(
+  item: FurnitureItem,
+  room: Room,
+  at: Vec2,
+  others: FurnitureItem[],
+  selected?: FurnitureItem,
+): Pick<FurnitureItem, 'position' | 'rotation' | 'elevation'> {
+  if (isSmall(item) && selected && isSurface(selected)) {
+    return { position: selected.position, rotation: selected.rotation, elevation: topOf(selected) }
+  }
+  if (mountOf(item) === 'floor' && !isSmall(item)) return { position: at, rotation: 0, elevation: 0 }
+  return placeAt(item, at, room, others)
 }
