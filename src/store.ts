@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware'
 import { del, get, set } from 'idb-keyval'
-import type { FurnitureItem, Opening, PlanImage, Project, Room, RoomPhoto, Vec2 } from './types'
+import type { FurnitureItem, Opening, Panorama, PlanImage, Project, Room, RoomPhoto, Vec2 } from './types'
 import { clampOpening, normalizeWinding, rectangleCorners } from './geometry/plan'
 
 export type Step = 'room' | 'photo' | 'decorate' | 'tour'
@@ -63,6 +63,9 @@ type State = {
   addFurniture: (f: Omit<FurnitureItem, 'id'>) => string
   updateFurniture: (id: string, patch: Partial<FurnitureItem>) => void
   removeFurniture: (id: string) => void
+
+  addPanorama: (p: Omit<Panorama, 'id'>) => string
+  removePanorama: (id: string) => void
 }
 
 const HISTORY = 60
@@ -161,6 +164,13 @@ export const useStore = create<State>()(
         updateFurniture: (id, patch) =>
           mutate((p) => ({ ...p, furniture: p.furniture.map((f) => (f.id === id ? { ...f, ...patch } : f)) })),
         removeFurniture: (id) => mutate((p) => ({ ...p, furniture: p.furniture.filter((f) => f.id !== id) })),
+
+        addPanorama: (pano) => {
+          const id = uid()
+          mutate((p) => ({ ...p, panoramas: [...(p.panoramas ?? []), { ...pano, id }] }))
+          return id
+        },
+        removePanorama: (id) => mutate((p) => ({ ...p, panoramas: (p.panoramas ?? []).filter((x) => x.id !== id) })),
       }
     },
     {

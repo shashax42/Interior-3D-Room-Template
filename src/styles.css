@@ -253,3 +253,37 @@ input { font: inherit; color: inherit; }
 .preset-princess { background: linear-gradient(120deg, #f6eef0, #ecebed); }
 .preset-modern { background: linear-gradient(120deg, #f6eee6, #f1e4df); }
 .preset-french { background: linear-gradient(120deg, #f7f6f3, #e9eef5); }
+
+/* Photoreal render overlay */
+.trace-overlay { position: fixed; inset: 0; background: #1d1a18; z-index: 50; display: flex; flex-direction: column; }
+.trace-stage { flex: 1; min-height: 0; display: grid; place-items: center; padding: 16px; overflow: hidden; }
+.trace-canvas { max-width: 100%; max-height: 100%; width: auto; height: auto; border-radius: 6px; box-shadow: 0 10px 40px rgba(0,0,0,0.4); }
+.trace-canvas.pano { width: 100%; height: auto; }
+.trace-bar { display: flex; gap: 10px; align-items: center; padding: 12px 16px; background: #26221f; color: #f3ece6; flex-wrap: wrap; }
+.trace-bar .btn { background: #36302c; border-color: #4a423d; color: #f3ece6; }
+.trace-bar .btn.primary { background: var(--accent); border-color: var(--accent); }
+.trace-progress { position: relative; flex: 1; min-width: 160px; height: 30px; background: #36302c; border-radius: 8px; overflow: hidden; }
+.trace-progress .fill { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #b8657b, #e39aad); transition: width 0.3s; }
+.trace-progress span { position: relative; display: block; line-height: 30px; padding: 0 12px; font-size: 13px; }
+.trace-exposure { display: flex; gap: 6px; align-items: center; font-size: 13px; }
+.trace-exposure input { accent-color: var(--accent); width: 110px; }
+.trace-hint { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); color: #f3ece6; background: rgba(0,0,0,0.45); padding: 8px 14px; border-radius: 999px; font-size: 13px; margin: 0; }
+
+/* VR tour */
+.pano-tour { position: fixed; inset: 0; z-index: 40; background: #111; }
+.pano-tour .empty { color: #ddd; }
+.pano-tour .empty h2 { color: #fff; }
+.pano-fade { position: absolute; inset: 0; background: #fff; opacity: 0; pointer-events: none; transition: opacity 0.22s; }
+.pano-fade.on { opacity: 1; }
+.pano-strip {
+  position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; gap: 8px; align-items: center;
+  background: rgba(20, 17, 15, 0.6); padding: 8px; border-radius: 14px; max-width: calc(100% - 32px); overflow-x: auto;
+}
+.pano-thumb { position: relative; flex: none; }
+.pano-thumb > button:first-child { border: 2px solid transparent; border-radius: 8px; padding: 0; overflow: hidden; width: 96px; height: 48px; position: relative; background: #000; }
+.pano-thumb.on > button:first-child { border-color: var(--accent); }
+.pano-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pano-thumb span { position: absolute; left: 4px; top: 2px; color: #fff; font-size: 11px; font-weight: 700; text-shadow: 0 1px 2px #000; }
+.pano-thumb .x { position: absolute; top: -6px; right: -6px; width: 20px; height: 20px; border-radius: 50%; border: 0; background: #fff; font-size: 13px; line-height: 20px; padding: 0; }
+.pano-strip .btn { flex: none; }
+.tour-bar button:disabled { opacity: 0.5; }

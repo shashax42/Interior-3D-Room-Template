@@ -65,15 +65,26 @@ function OrbitRig({ enabled, photo }: { enabled: boolean; photo: RoomPhoto | nul
   )
 }
 
-function CaptureBridge({ capture }: { capture?: MutableRefObject<(() => HTMLCanvasElement) | null> }) {
+/** What the rest of the app needs from a live 3D view: a snapshot, and the scene and camera for photoreal renders. */
+export type ViewHandle = {
+  snapshot: () => HTMLCanvasElement
+  scene: THREE.Scene
+  camera: THREE.PerspectiveCamera
+}
+
+function CaptureBridge({ capture }: { capture?: MutableRefObject<ViewHandle | null> }) {
   const gl = useThree((s) => s.gl)
   const scene = useThree((s) => s.scene)
-  const camera = useThree((s) => s.camera)
+  const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera
   useEffect(() => {
     if (!capture) return
-    capture.current = () => {
-      gl.render(scene, camera)
-      return gl.domElement
+    capture.current = {
+      snapshot: () => {
+        gl.render(scene, camera)
+        return gl.domElement
+      },
+      scene,
+      camera,
     }
     return () => {
       capture.current = null
@@ -96,7 +107,7 @@ export function Viewport({ mode, editable, photoView, lookId = 'none', capture }
   /** A photo whose viewpoint the orbit camera should jump to. */
   photoView?: RoomPhoto | null
   lookId?: string
-  capture?: MutableRefObject<(() => HTMLCanvasElement) | null>
+  capture?: MutableRefObject<ViewHandle | null>
 }) {
   const room = useStore((s) => s.project.room)
   const furniture = useStore((s) => s.project.furniture)

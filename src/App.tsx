@@ -6,6 +6,7 @@ import { PhotoStep } from './steps/PhotoStep'
 import { DecorateStep } from './steps/DecorateStep'
 import { TourStep } from './steps/TourStep'
 import { mountOf } from './furniture/catalog'
+import type { ViewHandle } from './scene/Viewport'
 
 const STEPS: { id: Step; label: string }[] = [
   { id: 'room', label: '방 만들기' },
@@ -60,7 +61,7 @@ export default function App() {
   const canRedo = useStore((s) => s.future.length > 0)
   const [photoView, setPhotoView] = useState<RoomPhoto | null>(null)
   const [lookId, setLookId] = useState('film')
-  const capture = useRef<(() => HTMLCanvasElement) | null>(null)
+  const capture = useRef<ViewHandle | null>(null)
   useShortcuts()
 
   return (

@@ -1,8 +1,10 @@
 import { useRef, useState, type MutableRefObject, type PointerEvent as RPointerEvent } from 'react'
-import { Viewport } from '../scene/Viewport'
+import { Viewport, type ViewHandle } from '../scene/Viewport'
 import { joystick } from '../scene/TourControls'
 import { LOOKS, captureWithLook, lookById } from '../scene/filters'
 import { useStore } from '../store'
+import { PhotorealOverlay, type PhotorealMode } from '../render/PhotorealOverlay'
+import { PanoTour } from '../render/PanoTour'
 
 /** On-screen stick for phones and tablets. Writes into the shared `joystick` input the tour reads each frame. */
 function Joystick() {
@@ -45,13 +47,16 @@ function Joystick() {
 }
 
 export function TourStep({ capture, lookId, setLookId }: {
-  capture: MutableRefObject<(() => HTMLCanvasElement) | null>
+  capture: MutableRefObject<ViewHandle | null>
   lookId: string
   setLookId: (id: string) => void
 }) {
   const name = useStore((s) => s.project.room.name)
+  const panoCount = useStore((s) => s.project.panoramas?.length ?? 0)
+  const [tracing, setTracing] = useState<PhotorealMode | null>(null)
+  const [vr, setVr] = useState(false)
   const save = () => {
-    const canvas = capture.current?.()
+    const canvas = capture.current?.snapshot()
     if (!canvas) return
     const a = document.createElement('a')
     a.href = captureWithLook(canvas, lookById(lookId))
@@ -68,9 +73,14 @@ export function TourStep({ capture, lookId, setLookId }: {
             {l.name}
           </button>
         ))}
-        <button className="shot" onClick={save}>📷 저장</button>
+        <button onClick={save}>화면 저장</button>
+        <button className="shot" onClick={() => capture.current && setTracing('view')}>✨ 실사 사진</button>
+        <button className="shot" onClick={() => capture.current && setTracing('pano')}>📷 여기서 360° 찍기</button>
+        <button className="shot" disabled={!panoCount} onClick={() => setVr(true)}>🥽 VR 투어 ({panoCount})</button>
       </div>
       <Joystick />
+      {tracing && capture.current && <PhotorealOverlay view={capture.current} mode={tracing} onClose={() => setTracing(null)} />}
+      {vr && <PanoTour onClose={() => setVr(false)} />}
     </main>
   )
 }

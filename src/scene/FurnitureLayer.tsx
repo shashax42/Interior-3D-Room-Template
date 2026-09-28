@@ -7,11 +7,12 @@ import { CustomModel } from '../furniture/CustomModel'
 import { isSmall, mountOf } from '../furniture/catalog'
 import { placeAt, placeOnWall } from '../furniture/placement'
 import { useStore } from '../store'
+import { NO_TRACE } from '../render/photoreal'
 
 function SelectionBox({ item }: { item: FurnitureItem }) {
   const { w, d, h } = item.size
   return (
-    <group>
+    <group userData={{ [NO_TRACE]: true }}>
       <lineSegments position={[0, h / 2, 0]} raycast={() => null}>
         <edgesGeometry args={[new THREE.BoxGeometry(w + 0.04, h + 0.04, d + 0.04)]} />
         <lineBasicMaterial color="#e2728a" />

@@ -6,9 +6,10 @@ import { PRESETS, newItem, type Preset } from '../furniture/presets'
 import { initialPlacement } from '../furniture/placement'
 import { importModelFile } from '../furniture/CustomModel'
 import { centroid } from '../geometry/plan'
-import { Viewport } from '../scene/Viewport'
+import { Viewport, type ViewHandle } from '../scene/Viewport'
 import { LOOKS, captureWithLook, lookById } from '../scene/filters'
 import { CmField, ColorField, Section } from '../ui/fields'
+import { PhotorealOverlay } from '../render/PhotorealOverlay'
 
 function ItemPanel({ item }: { item: FurnitureItem }) {
   const room = useStore((s) => s.project.room)
@@ -75,7 +76,7 @@ function ItemPanel({ item }: { item: FurnitureItem }) {
 export function DecorateStep({ photoView, setPhotoView, capture, lookId, setLookId }: {
   photoView: RoomPhoto | null
   setPhotoView: (p: RoomPhoto | null) => void
-  capture: MutableRefObject<(() => HTMLCanvasElement) | null>
+  capture: MutableRefObject<ViewHandle | null>
   lookId: string
   setLookId: (id: string) => void
 }) {
@@ -87,6 +88,7 @@ export function DecorateStep({ photoView, setPhotoView, capture, lookId, setLook
   const setProject = useStore((s) => s.setProject)
   const [cat, setCat] = useState<Category>('프린세스')
   const [uploading, setUploading] = useState(false)
+  const [tracing, setTracing] = useState(false)
   const fileRef = useRef<HTMLInputElement>(null)
   const { room, furniture, photos } = project
   const selected = selection?.type === 'furniture' ? furniture.find((f) => f.id === selection.id) : undefined
@@ -136,7 +138,7 @@ export function DecorateStep({ photoView, setPhotoView, capture, lookId, setLook
   }
 
   const savePicture = () => {
-    const canvas = capture.current?.()
+    const canvas = capture.current?.snapshot()
     if (!canvas) return
     const a = document.createElement('a')
     a.href = captureWithLook(canvas, lookById(lookId))
@@ -210,12 +212,15 @@ export function DecorateStep({ photoView, setPhotoView, capture, lookId, setLook
               </button>
             ))}
           </div>
-          <button className="btn primary" onClick={savePicture}>지금 화면 사진으로 저장</button>
+          <button className="btn primary" onClick={() => capture.current && setTracing(true)}>✨ 실사 사진으로 렌더</button>
+          <button className="btn" onClick={savePicture}>지금 화면 그대로 저장</button>
+          <p className="hint">실사 렌더는 창문으로 들어오는 햇빛과 벽에 반사되는 빛까지 계산해서, 찍은 사진처럼 만들어요.</p>
         </Section>
       </aside>
       <main className="main">
         <Viewport mode="orbit" editable photoView={photoView} lookId={lookId} capture={capture} />
       </main>
+      {tracing && capture.current && <PhotorealOverlay view={capture.current} mode="view" onClose={() => setTracing(false)} />}
     </>
   )
 }

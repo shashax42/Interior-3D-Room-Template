@@ -4,6 +4,7 @@ import { useThree } from '@react-three/fiber'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import type { Room } from '../types'
 import { bounds, centroid, wallSegments } from '../geometry/plan'
+import { NO_TRACE } from '../render/photoreal'
 
 /** Soft indoor light: an image-based fill, a skylight, and daylight coming in through the first window. */
 export function Lighting({ room, photoLit }: { room: Room; photoLit: boolean }) {
@@ -57,7 +58,8 @@ export function Lighting({ room, photoLit }: { room: Room; photoLit: boolean }) 
         shadow-camera-near={0.1}
         shadow-camera-far={30}
       />
-      <pointLight position={[c.x, room.height - 0.25, c.z]} intensity={photoLit ? 0.6 : 1.4} distance={span * 2.5} decay={1.6} color="#ffe6c7" />
+      {/* Realtime-only fill light; the photoreal render uses real fixtures and daylight instead. */}
+      <pointLight userData={{ [NO_TRACE]: true }} position={[c.x, room.height - 0.25, c.z]} intensity={photoLit ? 0.6 : 1.4} distance={span * 2.5} decay={1.6} color="#ffe6c7" />
     </>
   )
 }

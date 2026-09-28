@@ -5,6 +5,7 @@ import type { FurnitureItem, Opening, Room } from '../types'
 import { isConvexCorner, wallSegments, type WallSegment } from '../geometry/plan'
 import { ROOM_LAYER, withPhotoProjection } from './projectionShader'
 import { plankTexture } from './textures'
+import { NO_TRACE } from '../render/photoreal'
 import { Medallions, defaultTrim, wallTrimGeometry } from './Trim'
 
 /** Matrix that maps wall-local coordinates (x along the wall, y up, z into the room) to world space. */
@@ -96,7 +97,8 @@ function OpeningMesh({ room, wall, o, selected, onSelect }: {
               <boxGeometry args={[0.04, o.height, 0.06]} />
               <meshStandardMaterial color={trim} roughness={0.5} />
             </mesh>
-            <mesh position={[0, o.height / 2, -0.01]}>
+            {/* Glass: a faint glow in realtime; left out of photoreal renders so daylight comes through clean. */}
+            <mesh position={[0, o.height / 2, -0.01]} userData={{ [NO_TRACE]: true }}>
               <planeGeometry args={[o.width, o.height]} />
               <meshPhysicalMaterial color="#dcebf5" emissive="#eef6ff" emissiveIntensity={0.9} transparent opacity={0.55} roughness={0.05} side={THREE.DoubleSide} />
             </mesh>

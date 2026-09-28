@@ -131,9 +131,20 @@ export type FurnitureItem = {
   modelId?: string
 }
 
+/** A 360° photoreal picture taken from one spot in the room: one stop of the VR tour. */
+export type Panorama = {
+  id: string
+  /** Where the camera stood (x, z on the floor plan; y is eye height). */
+  position: { x: number; y: number; z: number }
+  /** Equirectangular JPEG, 2:1. */
+  dataUrl: string
+}
+
 export type Project = {
   room: Room
   planImage: PlanImage | null
   photos: RoomPhoto[]
   furniture: FurnitureItem[]
+  /** Missing in projects saved before the VR tour existed. */
+  panoramas?: Panorama[]
 }

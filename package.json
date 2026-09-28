@@ -13,9 +13,12 @@
     "@react-three/drei": "^10.7.9",
     "@react-three/fiber": "^9.8.1",
     "idb-keyval": "^6.3.0",
+    "oidn-web": "^0.4.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "three": "^0.186.1",
+    "three-gpu-pathtracer": "^0.0.24",
+    "three-mesh-bvh": "^0.9.15",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
