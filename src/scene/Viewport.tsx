@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type ComponentRef, type MutableRefObject } from 'react'
 import * as THREE from 'three'
-import { Canvas, useThree } from '@react-three/fiber'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
+import { Bloom, EffectComposer, N8AO, SMAA, ToneMapping } from '@react-three/postprocessing'
+import { ToneMappingMode } from 'postprocessing'
 import { useStore } from '../store'
-import type { RoomPhoto, Vec2 } from '../types'
-import { bounds, centroid, wallSegments } from '../geometry/plan'
+import type { FurnitureItem, Room, RoomPhoto, Vec2 } from '../types'
+import { bounds, centroid, pointInPolygon, wallSegments } from '../geometry/plan'
 import { RoomMesh } from './RoomMesh'
 import { FurnitureLayer } from './FurnitureLayer'
 import { Lighting } from './Lighting'
@@ -12,6 +14,9 @@ import { PhotoProjection } from './PhotoProjection'
 import { TourControls } from './TourControls'
 import { lookById } from './filters'
 import { surfacesReady } from './materials'
+import { TRACE_MIRROR } from '../render/traceFlags'
+import { insideFootprint } from '../furniture/placement'
+import { isWalkable } from '../furniture/catalog'
 
 export type ViewMode = 'orbit' | 'tour'
 type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
@@ -79,21 +84,89 @@ function CaptureBridge({ capture }: { capture?: MutableRefObject<ViewHandle | nu
   const gl = useThree((s) => s.gl)
   const scene = useThree((s) => s.scene)
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera
+  const advance = useThree((s) => s.advance)
   useEffect(() => {
     if (!capture) return
     capture.current = {
       snapshot: () => {
-        gl.render(scene, camera)
+        // Run one full frame (including the photo look post-processing) so the snapshot matches the screen.
+        advance(performance.now())
         return gl.domElement
       },
       scene,
       camera,
     }
+    if (import.meta.env.DEV) Object.assign(window, { __view: capture.current })
     return () => {
       capture.current = null
     }
-  }, [capture, gl, scene, camera])
+  }, [capture, gl, scene, camera, advance])
   return null
+}
+
+/**
+ * What mirrors reflect: a snapshot of the room itself, taken from the middle of the room at eye height and
+ * refreshed only after edits (a live mirror would redraw the whole room every frame).
+ */
+function MirrorReflections({ room, furniture }: { room: Room; furniture: FurnitureItem[] }) {
+  const gl = useThree((s) => s.gl)
+  const scene = useThree((s) => s.scene)
+  const invalidate = useThree((s) => s.invalidate)
+  const target = useMemo(
+    () => new THREE.WebGLCubeRenderTarget(256, { generateMipmaps: true, minFilter: THREE.LinearMipmapLinearFilter }),
+    [],
+  )
+  const cubeCamera = useMemo(() => new THREE.CubeCamera(0.05, 60, target), [target])
+  const dirty = useRef(true)
+  useEffect(() => () => target.dispose(), [target])
+  useEffect(() => {
+    dirty.current = true
+    invalidate()
+    // Scanned models finish loading a moment later; capture again once they are in.
+    const t = setTimeout(() => {
+      dirty.current = true
+      invalidate()
+    }, 2500)
+    return () => clearTimeout(t)
+  }, [room, furniture, invalidate])
+  useFrame(() => {
+    if (!dirty.current) return
+    dirty.current = false
+    const c = centroid(room.corners)
+    cubeCamera.position.set(c.x, 1.4, c.z)
+    const mirrors: THREE.Mesh[] = []
+    scene.traverse((o) => {
+      if (o.userData[TRACE_MIRROR]) mirrors.push(o as THREE.Mesh)
+    })
+    if (!mirrors.length) return
+    mirrors.forEach((m) => (m.visible = false))
+    cubeCamera.update(gl, scene)
+    mirrors.forEach((m) => {
+      m.visible = true
+      const mat = m.material as THREE.MeshStandardMaterial
+      if (mat.envMap !== target.texture) {
+        mat.envMap = target.texture
+        mat.needsUpdate = true
+      }
+    })
+  })
+  return null
+}
+
+/**
+ * The "photo look" on top of the 3D view: soft contact shadows where things meet (ambient occlusion), a gentle
+ * glow around windows and lamps, and filmic tone mapping. Flat, evenly lit surfaces with hard edges are what
+ * make a 3D view read as a drawing; this is what real camera photos of rooms have instead.
+ */
+function PhotoLook({ strong }: { strong: boolean }) {
+  return (
+    <EffectComposer multisampling={0} enableNormalPass={false}>
+      <N8AO aoRadius={0.6} distanceFalloff={0.6} intensity={strong ? 3 : 2.2} quality="medium" halfRes color="#2a1e18" />
+      <Bloom mipmapBlur luminanceThreshold={0.9} luminanceSmoothing={0.2} intensity={0.45} />
+      <ToneMapping mode={ToneMappingMode.AGX} />
+      <SMAA />
+    </EffectComposer>
+  )
 }
 
 /**
@@ -126,11 +199,27 @@ function RenderBudget({ room, furniture }: { room: unknown; furniture: unknown }
 }
 
 /** Where the tour starts: just inside the first door, or the middle of the room. */
-function tourStart(room: ReturnType<typeof useStore.getState>['project']['room']): Vec2 | undefined {
-  const door = room.openings.find((o) => o.kind === 'door')
-  if (!door) return undefined
-  const w = wallSegments(room.corners)[door.wall]
-  return { x: w.start.x + w.dir.x * door.offset + w.inward.x * 0.7, z: w.start.z + w.dir.z * door.offset + w.inward.z * 0.7 }
+/**
+ * Where the tour starts: the free spot that sees the most of the room, the way a real-estate photographer
+ * stands in a corner or the doorway and shoots across the room. Candidates are just inside the door and just
+ * inside each corner; spots inside furniture are skipped.
+ */
+function tourStart(room: Room, furniture: FurnitureItem[]): Vec2 | undefined {
+  const c = centroid(room.corners)
+  const candidates: Vec2[] = []
+  for (const d of room.openings.filter((o) => o.kind === 'door')) {
+    const w = wallSegments(room.corners)[d.wall]
+    candidates.push({ x: w.start.x + w.dir.x * d.offset + w.inward.x * 0.7, z: w.start.z + w.dir.z * d.offset + w.inward.z * 0.7 })
+  }
+  for (const p of room.corners) {
+    const toC = { x: c.x - p.x, z: c.z - p.z }
+    const len = Math.hypot(toC.x, toC.z) || 1
+    candidates.push({ x: p.x + (toC.x / len) * 0.75, z: p.z + (toC.z / len) * 0.75 })
+  }
+  const blocked = (p: Vec2) => furniture.some((f) => !isWalkable(f) && insideFootprint(p, f, 0.3))
+  const free = candidates.filter((p) => pointInPolygon(p, room.corners) && !blocked(p))
+  if (!free.length) return undefined
+  return free.reduce((best, p) => (Math.hypot(p.x - c.x, p.z - c.z) > Math.hypot(best.x - c.x, best.z - c.z) ? p : best))
 }
 
 export function Viewport({ mode, editable, photoView, lookId = 'none', capture }: {
@@ -150,7 +239,7 @@ export function Viewport({ mode, editable, photoView, lookId = 'none', capture }
   const look = lookById(lookId)
   const photoLit = photos.some((p) => p.projected && p.camera)
   // Recomputed only when entering the tour, not on every room edit.
-  const start = useMemo(() => tourStart(room), [mode])
+  const start = useMemo(() => tourStart(room, furniture), [mode])
 
   return (
     <div className="viewport">
@@ -162,14 +251,16 @@ export function Viewport({ mode, editable, photoView, lookId = 'none', capture }
         gl={{ antialias: true, preserveDrawingBuffer: true }}
         camera={{ fov: 45, near: 0.03, far: 200 }}
         onCreated={({ gl }) => {
-          gl.toneMapping = THREE.NeutralToneMapping
+          // Tone mapping happens in the photo look pass (PhotoLook) instead.
+          gl.toneMapping = THREE.NoToneMapping
           gl.toneMappingExposure = 1.0
           gl.shadowMap.type = THREE.PCFSoftShadowMap
         }}
         onPointerMissed={() => editable && select(null)}
         style={{ filter: look.css === 'none' ? undefined : look.css, touchAction: 'none' }}
       >
-        <color attach="background" args={['#efe9e4']} />
+        {/* Inside the room the background is what shows through the windows: a bright, pale sky. */}
+        <color attach="background" args={[mode === 'tour' ? '#e4edf5' : '#efe9e4']} />
         <Lighting room={room} photoLit={photoLit} />
         <PhotoProjection />
         <RoomMesh
@@ -187,6 +278,8 @@ export function Viewport({ mode, editable, photoView, lookId = 'none', capture }
         )}
         <CaptureBridge capture={capture} />
         <RenderBudget room={room} furniture={furniture} />
+        <MirrorReflections room={room} furniture={furniture} />
+        <PhotoLook strong={mode === 'tour'} />
       </Canvas>
       {look.vignette > 0 && <div className="vignette" style={{ opacity: look.vignette / 0.4 }} />}
     </div>

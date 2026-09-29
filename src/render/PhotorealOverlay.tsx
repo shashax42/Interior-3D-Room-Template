@@ -14,7 +14,7 @@ import { saveImage } from '../ui/SaveSheet'
 export type PhotorealMode = 'view' | 'pano'
 
 // With the AI denoiser a few dozen samples are enough; without it the image needs many more to clear up.
-const SAMPLES = denoiserAvailable() ? { view: 96, pano: 72 } : { view: 360, pano: 260 }
+const SAMPLES = denoiserAvailable() ? { view: 64, pano: 48 } : { view: 160, pano: 120 }
 
 type Phase = 'preparing' | 'tracing' | 'denoising' | 'done' | 'failed'
 
@@ -83,7 +83,7 @@ export function PhotorealOverlay({ view, mode, onClose }: { view: ViewHandle; mo
       } else {
         // Match the live view's framing at a resolution the GPU can clear up in a reasonable time.
         const aspect = view.camera.aspect
-        width = Math.round(Math.min(1280, box.width, box.height * aspect))
+        width = Math.round(Math.min(960, box.width, box.height * aspect))
         height = Math.round(width / aspect)
         const cam = view.camera.clone()
         cam.updateProjectionMatrix()

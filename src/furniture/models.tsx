@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react'
+import { useEffect, useMemo, type ReactNode } from 'react'
 import * as THREE from 'three'
 import { RoundedBox } from '@react-three/drei'
 import type { FurnitureItem } from '../types'
@@ -387,36 +387,54 @@ function Plant({ item }: P) {
 }
 
 /** Pleated sheer panels on a rod, gathered at the bottom like the balloon curtains in period rooms. */
+/**
+ * Curtains the way people actually hang them: a sheer across the window and two heavier drapes pulled to the
+ * sides and caught with tie-backs, so daylight still comes in.
+ */
 function Curtain({ item }: P) {
   const { w, d, h } = item.size
-  const geo = useMemo(() => {
-    const g = new THREE.PlaneGeometry(w, h - 0.06, Math.max(24, Math.round(w * 40)), 24)
+  const H = h - 0.06
+  const sheer = useMemo(() => {
+    const g = new THREE.PlaneGeometry(w, H, Math.max(24, Math.round(w * 40)), 12)
     const pos = g.attributes.position
+    for (let i = 0; i < pos.count; i++) pos.setZ(i, Math.sin((pos.getX(i) / w) * Math.PI * w * 14) * 0.012)
+    g.computeVertexNormals()
+    return g
+  }, [w, H])
+  const pw = Math.min(0.55, w * 0.26)
+  const drape = useMemo(() => {
+    // Gathered toward the outer edge (x = +pw/2) at the tie-back, falling loose above and below it.
+    const g = new THREE.PlaneGeometry(pw, H, 36, 30)
+    const pos = g.attributes.position
+    const tie = 0.58 // fraction of the height from the top
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i)
-      const y = pos.getY(i)
-      const t = 1 - (y + (h - 0.06) / 2) / (h - 0.06) // 0 at top, 1 at bottom
-      const pleat = Math.sin((x / w) * Math.PI * w * 12) * 0.025
-      // Scallops that swag up between gathers near the hem.
-      const swag = Math.pow(Math.max(0, t - 0.7) / 0.3, 2) * (0.5 - 0.5 * Math.cos((x / w + 0.5) * Math.PI * 2 * Math.max(2, Math.round(w / 0.7))))
-      pos.setZ(i, pleat * (1 + t * 0.6) + swag * 0.05)
-      pos.setY(i, y + swag * 0.18)
+      const t = 0.5 - pos.getY(i) / H
+      const pinch = 1 - 0.55 * Math.exp(-Math.pow((t - tie) / 0.22, 2))
+      const nx = pw / 2 - (pw / 2 - x) * pinch
+      const folds = Math.sin(((x + pw / 2) / pw) * Math.PI * 7) * 0.035 * (1.2 - pinch * 0.5)
+      pos.setX(i, nx)
+      pos.setZ(i, folds + (1 - pinch) * 0.05)
     }
     g.computeVertexNormals()
     return g
-  }, [w, h])
+  }, [pw, H])
+  useEffect(() => () => { sheer.dispose(); drape.dispose() }, [sheer, drape])
   return (
     <group>
       <mesh position={[0, h - 0.03, 0]} rotation={[0, 0, Math.PI / 2]} castShadow>
         <cylinderGeometry args={[0.012, 0.012, w + 0.2, 12]} />
         <Metal />
       </mesh>
-      <mesh geometry={geo} position={[0, (h - 0.06) / 2, -d / 2 + 0.06]} castShadow>
-        <meshStandardMaterial color={item.accent} roughness={1} side={THREE.DoubleSide} transparent opacity={0.8} />
+      <mesh geometry={sheer} position={[0, H / 2, -d / 2 + 0.04]}>
+        <meshStandardMaterial color={item.accent} roughness={1} side={THREE.DoubleSide} transparent opacity={0.35} depthWrite={false} />
       </mesh>
-      <mesh geometry={geo} position={[0, (h - 0.06) / 2 + 0.02, d / 2 - 0.02]} scale={[1, 0.97, 1.3]} castShadow>
-        <meshStandardMaterial color={item.color} roughness={1} side={THREE.DoubleSide} transparent opacity={0.72} />
-      </mesh>
+      {[-1, 1].map((s) => (
+        // No shadow casting: the sun comes through walls in realtime, so drape shadows land on the far wall.
+        <mesh key={s} geometry={drape} position={[s * (w / 2 - pw / 2), H / 2, d / 2 - 0.03]} scale={[s, 1, 1]}>
+          <meshPhysicalMaterial color={item.color} roughness={0.9} sheen={0.6} sheenColor="#ffffff" side={THREE.DoubleSide} />
+        </mesh>
+      ))}
     </group>
   )
 }

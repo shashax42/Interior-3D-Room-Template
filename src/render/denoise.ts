@@ -29,8 +29,21 @@ export function warmUpDenoiser() {
   if (denoiserAvailable()) loadUNet().catch(() => {})
 }
 
-/** Returns a denoised copy of a (tone-mapped) canvas. Rejects if WebGPU or the model is unavailable. */
-export async function denoiseCanvas(source: HTMLCanvasElement): Promise<HTMLCanvasElement> {
+/** How long to wait for the denoiser before giving up on it (some GPUs never finish). */
+const DENOISE_TIMEOUT_MS = 25000
+
+/**
+ * Returns a denoised copy of a (tone-mapped) canvas. Rejects if WebGPU or the model is unavailable, or if the
+ * denoiser doesn't finish in time: on some older integrated GPUs WebGPU exists but the network never completes.
+ */
+export function denoiseCanvas(source: HTMLCanvasElement): Promise<HTMLCanvasElement> {
+  return Promise.race([
+    runDenoise(source),
+    new Promise<never>((_, reject) => setTimeout(() => reject(new Error('denoiser timed out')), DENOISE_TIMEOUT_MS)),
+  ])
+}
+
+async function runDenoise(source: HTMLCanvasElement): Promise<HTMLCanvasElement> {
   const net = await loadUNet()
   const { width, height } = source
   const out = document.createElement('canvas')

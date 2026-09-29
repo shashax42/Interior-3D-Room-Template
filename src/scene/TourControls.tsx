@@ -6,7 +6,8 @@ import { centroid, pointInPolygon, projectOnWall, wallSegments } from '../geomet
 import { insideFootprint } from '../furniture/placement'
 import { isWalkable } from '../furniture/catalog'
 
-export const EYE_HEIGHT = 1.6
+// Eye level of someone holding a phone to take a room photo.
+export const EYE_HEIGHT = 1.45
 const SPEED = 1.6 // m/s
 const BODY = 0.25 // how close to a wall or furniture you can stand
 
@@ -27,7 +28,7 @@ export function TourControls({ room, furniture, start }: { room: Room; furniture
     const c = centroid(room.corners)
     const yaw = start ? Math.atan2(c.x - p.x, -(c.z - p.z)) : 0
     look.current = { yaw, pitch: 0 }
-    camera.fov = 70
+    camera.fov = 62
     camera.updateProjectionMatrix()
     // Only on entering the tour; later room edits should not teleport you.
   }, [])

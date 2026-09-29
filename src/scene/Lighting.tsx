@@ -34,7 +34,8 @@ export function Lighting({ room, photoLit }: { room: Room; photoLit: boolean }) 
     if (!win) return new THREE.Vector3(c.x + 2, room.height + 4, c.z + 3)
     const w = wallSegments(room.corners)[win.wall]
     const at = { x: w.start.x + w.dir.x * win.offset, z: w.start.z + w.dir.z * win.offset }
-    return new THREE.Vector3(at.x - w.inward.x * 3, win.sill + win.height + 1.8, at.z - w.inward.z * 3)
+    // High midday sun: shadows fall on the floor next to the furniture instead of stretching up the far wall.
+    return new THREE.Vector3(at.x - w.inward.x * 2.5, win.sill + win.height + 5, at.z - w.inward.z * 2.5)
   }, [room, c.x, c.z])
 
   const target = useMemo(() => new THREE.Object3D(), [])

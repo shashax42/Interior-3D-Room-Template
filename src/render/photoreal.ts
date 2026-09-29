@@ -128,7 +128,7 @@ export function startTrace({ scene, camera, width, height, samples, exposure = 1
 
   const tracer = new WebGLPathTracer(renderer)
   tracer.tiles.set(1, 1)
-  tracer.bounces = 6
+  tracer.bounces = 4
   tracer.filterGlossyFactor = 0.6 // tames sparkly noise on glossy surfaces
   tracer.minSamples = 1
   tracer.fadeDuration = 0
@@ -141,7 +141,14 @@ export function startTrace({ scene, camera, width, height, samples, exposure = 1
   let raf = 0
   let stopped = false
   let finished = false
-  // Several samples per frame while the page stays smooth: more when frames come back quickly, fewer when not.
+  canvas.addEventListener('webglcontextlost', () => {
+    stopped = true
+    cancelAnimationFrame(raf)
+    onError?.(new Error('그래픽 칩이 계산을 버티지 못했어요. 더 작은 크기로 다시 시도해주세요.'))
+  })
+  // A few samples per frame at most. The GPU runs queued work asynchronously, so queuing many samples per frame
+  // piles work up faster than an integrated GPU can trace and stalls it; frames coming back slowly mean the GPU is
+  // behind, so the batch shrinks back to one.
   let batch = 1
   let last = performance.now()
   const tick = () => {
@@ -149,8 +156,8 @@ export function startTrace({ scene, camera, width, height, samples, exposure = 1
     const now = performance.now()
     const dt = now - last
     last = now
-    if (dt < 34) batch = Math.min(12, batch + 1)
-    else if (dt > 60 && batch > 1) batch--
+    if (dt < 30) batch = Math.min(3, batch + 1)
+    else if (dt > 50) batch = 1
     try {
       for (let i = 0; i < batch && tracer.samples < samples; i++) tracer.renderSample()
     } catch (e) {

@@ -86,7 +86,8 @@ function create() {
     wall: { normalMap: tex('beige_wall_001_nor', wall) },
     linen: { map: detail('rough_linen_diff', fabric, 0.5), normalMap: tex('rough_linen_nor', fabric) },
     velvet: { normalMap: tex('velour_velvet_nor', fabric) },
-    marble: { map: detail('marble_01_diff', 1, 1), normalMap: tex('marble_01_nor', 1) },
+    // Faint veining only: furniture faces each map the whole tile, so strong veins read as patchwork.
+    marble: { map: detail('marble_01_diff', 0.6, 0.15), normalMap: tex('marble_01_nor', 0.6) },
   }
 }
 
