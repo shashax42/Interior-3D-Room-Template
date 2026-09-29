@@ -238,7 +238,7 @@ input { font: inherit; color: inherit; }
   .split-plan { border-right: 0; border-bottom: 1px solid var(--line); }
   .plan-hint { right: 12px; bottom: 52px; }
   .tour-help { font-size: 12px; }
-  .tour-bar { max-width: calc(100% - 32px); overflow-x: auto; }
+  .tour-bar { width: calc(100% - 32px); flex-wrap: wrap; justify-content: center; border-radius: 16px; }
 }
 
 .toggles { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; }
@@ -311,7 +311,7 @@ input { font: inherit; color: inherit; }
 .compare .divider { position: absolute; top: 0; bottom: 0; width: 2px; background: #fff; transform: translateX(-1px); pointer-events: none; }
 .compare .divider span { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #fff; color: var(--ink); font-size: 12px; padding: 4px 10px; border-radius: 999px; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
 .tour-bar select { border: 0; background: transparent; font: inherit; font-size: 13px; padding: 7px 8px; border-radius: 999px; color: var(--ink); }
-.tour-bar .shot.main { padding: 7px 16px; }
+.tour-bar .hero-shot { padding: 7px 16px; }
 @media (max-width: 820px) {
   .ai-overlay { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
   .ai-panel { max-height: 48vh; }

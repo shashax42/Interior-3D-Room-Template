@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import * as THREE from 'three'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { useStore } from '../store'
+import { usePanoramas, useStore } from '../store'
 import type { Panorama } from '../types'
 
 /** Shows one panorama around the camera and lets you look around by dragging (or scroll to zoom). */
@@ -93,7 +93,7 @@ function PanoView({ pano, others, onGo }: { pano: Panorama; others: Panorama[]; 
 }
 
 export function PanoTour({ onClose }: { onClose: () => void }) {
-  const panoramas = useStore((s) => s.project.panoramas ?? [])
+  const panoramas = usePanoramas()
   const removePanorama = useStore((s) => s.removePanorama)
   const [currentId, setCurrentId] = useState(panoramas[0]?.id)
   const [fading, setFading] = useState(false)

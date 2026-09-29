@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useStore } from '../store'
+import { useGallery, useStore } from '../store'
 import type { GalleryPhoto } from '../types'
 import { Compare } from './AiPhotoOverlay'
 import { saveImage } from '../ui/SaveSheet'
@@ -35,7 +35,7 @@ function Viewer({ item, onClose }: { item: GalleryPhoto; onClose: () => void }) 
 
 /** Photos made from the 3D view, newest first. */
 export function GallerySection() {
-  const gallery = useStore((s) => s.project.gallery ?? [])
+  const gallery = useGallery()
   const [open, setOpen] = useState<GalleryPhoto | null>(null)
   if (!gallery.length) return null
   return (

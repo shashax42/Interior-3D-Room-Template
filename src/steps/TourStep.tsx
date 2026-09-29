@@ -74,7 +74,7 @@ export function TourStep({ capture, lookId, setLookId }: {
       <Viewport mode="tour" editable={false} lookId={lookId} capture={capture} />
       <div className="tour-help">드래그로 둘러보기 · <b>W A S D</b> / 방향키로 걷기</div>
       <div className="tour-bar">
-        <button className="shot main" onClick={openAi}>📸 사진처럼 만들기 (AI)</button>
+        <button className="shot hero-shot" onClick={openAi}>📸 사진처럼 만들기 (AI)</button>
         <button onClick={() => capture.current && setTracing('view')}>✨ 실사 렌더</button>
         <button onClick={() => capture.current && setTracing('pano')}>📷 여기서 360°</button>
         <button disabled={!panoCount} onClick={() => setVr(true)}>🥽 VR 투어 ({panoCount})</button>

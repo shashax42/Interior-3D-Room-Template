@@ -101,7 +101,7 @@ export type TraceJob = {
  * Traces `scene` from `camera` into a new canvas, a sample at a time so the picture sharpens as you watch.
  * For a 360° panorama pass an EquirectCamera and a 2:1 size.
  */
-export function startTrace({ scene, camera, width, height, samples, exposure = 1, onProgress, onDone }: {
+export function startTrace({ scene, camera, width, height, samples, exposure = 1, onProgress, onDone, onError }: {
   scene: THREE.Scene
   camera: THREE.Camera
   width: number
@@ -110,6 +110,7 @@ export function startTrace({ scene, camera, width, height, samples, exposure = 1
   exposure?: number
   onProgress?: (samples: number) => void
   onDone?: (canvas: HTMLCanvasElement) => void
+  onError?: (e: Error) => void
 }): TraceJob {
   const canvas = document.createElement('canvas')
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, preserveDrawingBuffer: true })
@@ -129,6 +130,7 @@ export function startTrace({ scene, camera, width, height, samples, exposure = 1
   tracer.rasterizeScene = false
   tracer.dynamicLowRes = false
   tracer.setScene(scene, camera)
+  if (import.meta.env.DEV) Object.assign(window, { __tracer: tracer, __traceRenderer: renderer })
 
   let raf = 0
   let stopped = false
@@ -143,7 +145,13 @@ export function startTrace({ scene, camera, width, height, samples, exposure = 1
     last = now
     if (dt < 34) batch = Math.min(12, batch + 1)
     else if (dt > 60 && batch > 1) batch--
-    for (let i = 0; i < batch && tracer.samples < samples; i++) tracer.renderSample()
+    try {
+      for (let i = 0; i < batch && tracer.samples < samples; i++) tracer.renderSample()
+    } catch (e) {
+      stopped = true
+      onError?.(e as Error)
+      return
+    }
     onProgress?.(Math.floor(tracer.samples))
     if (tracer.samples >= samples) {
       finished = true

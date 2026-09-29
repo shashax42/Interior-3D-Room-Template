@@ -208,5 +208,12 @@ export const useStore = create<State>()(
   ),
 )
 
+// Selectors must return the same object when nothing changed; a fresh `[]` on every call makes React re-render
+// forever. Use these shared empties for lists older projects don't have yet.
+const NO_PANORAMAS: Panorama[] = []
+const NO_GALLERY: GalleryPhoto[] = []
+export const usePanoramas = () => useStore((s) => s.project.panoramas ?? NO_PANORAMAS)
+export const useGallery = () => useStore((s) => s.project.gallery ?? NO_GALLERY)
+
 export const useProject = () => useStore((s) => s.project)
 export const useRoom = () => useStore((s) => s.project.room)
