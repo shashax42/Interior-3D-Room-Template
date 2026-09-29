@@ -52,7 +52,7 @@ function ItemPanel({ item }: { item: FurnitureItem }) {
           </div>
         </div>
       )}
-      {item.kind !== 'custom' && (
+      {item.kind !== 'custom' && item.kind !== 'scanned' && (
         <>
           <ColorField label="색상" value={item.color} onChange={(color) => update(item.id, { color })} />
           <ColorField label="포인트 색" value={item.accent} onChange={(accent) => update(item.id, { accent })} />
@@ -182,8 +182,12 @@ export function DecorateStep({ photoView, setPhotoView, capture, lookId, setLook
           </div>
           <div className="catalog">
             {CATALOG.filter((c) => c.category === cat).map((c) => (
-              <button key={c.kind} className="catalog-item" onClick={() => addFromCatalog(c)}>
-                <span className="dot" style={{ background: c.color, borderColor: c.accent }} />
+              <button key={`${c.kind}:${c.asset ?? ''}`} className="catalog-item" onClick={() => addFromCatalog(c)}>
+                {c.asset ? (
+                  <img className="thumb-img" src={`${import.meta.env.BASE_URL}models/thumbs/${c.asset}.jpg`} alt="" loading="lazy" />
+                ) : (
+                  <span className="dot" style={{ background: c.color, borderColor: c.accent }} />
+                )}
                 <span>{c.name}</span>
                 <small>
                   {Math.round(c.size.w * 100)}×{Math.round(c.size.d * 100)}

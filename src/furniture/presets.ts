@@ -15,14 +15,21 @@ export function newItem(entry: CatalogEntry, at = { x: 0, z: 0 }): NewItem {
     size: { ...entry.size },
     color: entry.color,
     accent: entry.accent,
+    ...(entry.asset ? { asset: entry.asset } : {}),
   }
 }
 
-const entry = (kind: CatalogEntry['kind']) => CATALOG.find((c) => c.kind === kind)!
+/** A catalog kind, or `scan:<id>` for a photoscanned model. */
+type Ref = CatalogEntry['kind'] | `scan:${string}`
+
+const entry = (ref: Ref) =>
+  ref.startsWith('scan:')
+    ? CATALOG.find((c) => c.kind === 'scanned' && c.asset === ref.slice(5))!
+    : CATALOG.find((c) => c.kind === ref)!
 
 /** An item with its back against a wall, centered `along` meters from the wall's start. */
-function againstWall(kind: CatalogEntry['kind'], w: WallSegment, along: number, patch: Partial<NewItem> = {}): NewItem {
-  const base = { ...newItem(entry(kind)), ...patch }
+function againstWall(ref: Ref, w: WallSegment, along: number, patch: Partial<NewItem> = {}): NewItem {
+  const base = { ...newItem(entry(ref)), ...patch }
   const a = Math.min(Math.max(along, base.size.w / 2 + 0.02), w.length - base.size.w / 2 - 0.02)
   return {
     ...base,
@@ -32,11 +39,11 @@ function againstWall(kind: CatalogEntry['kind'], w: WallSegment, along: number, 
 }
 
 /** A small item set on top of another at an offset in that item's own frame (x: right, z: toward its front). */
-function onTop(kind: CatalogEntry['kind'], host: NewItem, top: number, dx = 0, dz = 0, patch: Partial<NewItem> = {}): NewItem {
+function onTop(ref: Ref, host: NewItem, top: number, dx = 0, dz = 0, patch: Partial<NewItem> = {}): NewItem {
   const c = Math.cos(host.rotation)
   const s = Math.sin(host.rotation)
   return {
-    ...newItem(entry(kind)),
+    ...newItem(entry(ref)),
     ...patch,
     position: { x: host.position.x + dx * c + dz * s, z: host.position.z - dx * s + dz * c },
     rotation: host.rotation,
@@ -114,18 +121,11 @@ function princessRoom(room: Room) {
     const rack = againstWall('clothesRack', second, 0.3 + entry('clothesRack').size.w / 2)
     out.push(rack)
     out.push(againstWall('floorMirror', second, 0.3 + rack.size.w + 0.45))
-    ;[
-      { dx: -0.42, y: 1.78, w: 0.3, h: 0.38 },
-      { dx: -0.05, y: 1.9, w: 0.24, h: 0.3 },
-      { dx: 0.3, y: 1.75, w: 0.34, h: 0.44 },
-    ].forEach((f, i) =>
-      out.push(
-        againstWall('frame', second, 0.3 + rack.size.w / 2 + f.dx, {
-          elevation: f.y,
-          size: { w: f.w, d: 0.03, h: f.h },
-          accent: i === 1 ? '#f3e1db' : '#e9d7cf',
-        }),
-      ),
+    // A gallery over the rail: a real carved gilt frame between two small painted ones.
+    const mid = 0.3 + rack.size.w / 2
+    out.push(againstWall('scan:fancy_picture_frame_02', second, mid, { elevation: 1.72 }))
+    ;[-0.55, 0.55].forEach((dx) =>
+      out.push(againstWall('frame', second, mid + dx, { elevation: 1.85, size: { w: 0.26, d: 0.03, h: 0.34 }, accent: '#f3e1db' })),
     )
   }
   // Vanity on whichever remaining wall has a clear stretch for it.
@@ -139,7 +139,7 @@ function princessRoom(room: Room) {
   }
 
   out.push(...windowTreatments(room, 'balloonCurtain'))
-  const chandelier = entry('chandelier')
+  const chandelier = entry('scan:Chandelier_03')
   out.push({ ...newItem(chandelier, centroid(room.corners)), elevation: room.height - chandelier.size.h })
 
   return {
@@ -200,20 +200,25 @@ function frenchSalon(room: Room) {
   const fire = againstWall('fireplace', fireWall, fireWall.length / 2)
   out.push(fire)
   out.push(againstWall('ornateMirror', fireWall, fireWall.length / 2, { elevation: 1.3, size: { w: 0.8, d: 0.06, h: 1.0 } }))
-  out.push(onTop('candles', fire, fire.size.h, -0.5, 0.02), onTop('candles', fire, fire.size.h, 0.5, 0.02))
+  out.push(
+    onTop('candles', fire, fire.size.h, -0.55, 0.02),
+    onTop('candles', fire, fire.size.h, 0.55, 0.02),
+    onTop('scan:mantel_clock_01', fire, fire.size.h, 0, 0.02),
+  )
   // Seating facing the fireplace.
   const front = add(fire.position, scale(fireWall.inward, 1.9))
   const back = { x: -fireWall.inward.x, z: -fireWall.inward.z }
-  out.push({ ...newItem(entry('sofa')), position: front, rotation: facing(back), color: '#f4f0ea', accent: '#e7e2f0' })
+  out.push({ ...newItem(entry('scan:Sofa_01')), position: front, rotation: facing(back) })
   const side = fireWall.dir
   out.push({
-    ...newItem(entry('louisChair')),
+    ...newItem(entry('scan:ArmChair_01')),
     position: add(add(fire.position, scale(fireWall.inward, 1.0)), scale(side, -1.05)),
     rotation: facing(side) + 0.5,
-    accent: '#efe6d6',
   })
   for (const s of [-1, 1]) {
-    out.push({ ...newItem(entry('pedestal')), position: add(add(fire.position, scale(fireWall.inward, 1.1)), scale(side, s * 0.35)) })
+    const ped = { ...newItem(entry('pedestal')), position: add(add(fire.position, scale(fireWall.inward, 1.1)), scale(side, s * 0.35)) }
+    out.push(ped)
+    if (s > 0) out.push(onTop('scan:antique_ceramic_vase_01', ped, ped.size.h))
   }
   out.push({
     ...newItem(entry('rug')),
@@ -223,9 +228,17 @@ function frenchSalon(room: Room) {
     color: '#c9d0d6',
     accent: '#aebac6',
   })
-  if (ranked[1]) out.push(againstWall('floorLamp', ranked[1], 0.35, { color: '#f4efe6', accent: '#fbf3e6' }))
+  if (ranked[1]) {
+    const w = ranked[1]
+    out.push(againstWall('floorLamp', w, 0.35, { color: '#f4efe6', accent: '#fbf3e6' }))
+    const at = freeSpot(room, w, entry('scan:ClassicConsole_01').size.w)
+    if (at !== null) {
+      out.push(againstWall('scan:ClassicConsole_01', w, at))
+      out.push(againstWall('scan:fancy_picture_frame_01', w, at, { elevation: 1.45 }))
+    }
+  }
   out.push(...windowTreatments(room, 'curtain', { color: '#a9bcd8', accent: '#eef1f5' }))
-  const chandelier = entry('chandelier')
+  const chandelier = entry('scan:Chandelier_01')
   out.push({ ...newItem(chandelier, centroid(room.corners)), elevation: room.height - chandelier.size.h })
   return {
     room: {
@@ -241,5 +254,5 @@ function frenchSalon(room: Room) {
 export const PRESETS: Preset[] = [
   { id: 'princess', name: '프린세스 룸', description: '회색 벽 · 캐노피 프릴 침대 · 벌룬 커튼 · 드레스 행거', build: princessRoom },
   { id: 'modern', name: '모던 로맨틱', description: '베이지 몰딩 · 조개 헤드 침대 · 버블 샹들리에', build: modernRomantic },
-  { id: 'french', name: '프렌치 살롱', description: '흰 몰딩 · 대리석 벽난로 · 루이 체어 · 기둥 테이블', build: frenchSalon },
+  { id: 'french', name: '프렌치 살롱', description: '흰 몰딩 · 대리석 벽난로 · 실물 스캔 소파·암체어·콘솔', build: frenchSalon },
 ]

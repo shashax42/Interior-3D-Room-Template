@@ -113,6 +113,7 @@ export type FurnitureKind =
   | 'bubbleChandelier'
   | 'bench'
   | 'fireplace'
+  | 'scanned'
   | 'custom'
 
 export type FurnitureItem = {
@@ -129,6 +130,8 @@ export type FurnitureItem = {
   accent: string
   /** For kind 'custom': id of an uploaded model in the model store. */
   modelId?: string
+  /** For kind 'scanned': id of a photoscanned model shipped with the app (public/models). */
+  asset?: string
 }
 
 /** A 360° photoreal picture taken from one spot in the room: one stop of the VR tour. */

@@ -1,9 +1,10 @@
 import type { FurnitureItem, FurnitureKind } from '../types'
+import { SCANNED } from './scanned'
 
 /** Where an item attaches: standing on the floor, hung on a wall, or hanging from the ceiling. */
 export type Mount = 'floor' | 'wall' | 'ceiling'
 
-export const CATEGORIES = ['프린세스', '침실', '거실', '수납', '조명', '장식'] as const
+export const CATEGORIES = ['실물 스캔', '프린세스', '침실', '거실', '수납', '조명', '장식'] as const
 export type Category = (typeof CATEGORIES)[number]
 
 export type CatalogEntry = {
@@ -20,6 +21,8 @@ export type CatalogEntry = {
   small?: boolean
   /** Height of the surface other items can be set on, if not the item's full height (a bed's mattress). */
   top?: number
+  /** For kind 'scanned': which photoscanned model. */
+  asset?: string
 }
 
 export const GOLD = '#c9a45c'
@@ -65,20 +68,45 @@ export const CATALOG: CatalogEntry[] = [
   { kind: 'chandelier', name: '크리스탈 샹들리에', category: '조명', mount: 'ceiling', size: { w: 0.7, d: 0.7, h: 0.75 }, color: GOLD, accent: '#ffffff' },
 ]
 
-export const catalogEntry = (kind: FurnitureKind) => CATALOG.find((c) => c.kind === kind)
+// Real furniture, photoscanned: these carry their own textures, so they look like the actual object.
+CATALOG.unshift(
+  ...SCANNED.map(
+    (m): CatalogEntry => ({
+      kind: 'scanned',
+      asset: m.id,
+      name: m.name,
+      category: '실물 스캔',
+      mount: m.mount,
+      size: m.size,
+      color: '#ffffff',
+      accent: '#ffffff',
+      small: m.small,
+      top: m.top,
+      elevation: m.mount === 'wall' ? 1.35 : undefined,
+    }),
+  ),
+)
 
-export const mountOf = (item: Pick<FurnitureItem, 'kind'>): Mount => catalogEntry(item.kind)?.mount ?? 'floor'
+type Kinded = Pick<FurnitureItem, 'kind'> & { asset?: string }
 
-export const isSmall = (item: Pick<FurnitureItem, 'kind'>) => !!catalogEntry(item.kind)?.small
+/** The catalog entry an item came from (scanned models are told apart by their asset). */
+export const catalogEntry = (kind: FurnitureKind, asset?: string) =>
+  CATALOG.find((c) => c.kind === kind && (kind !== 'scanned' || c.asset === asset))
+
+const entryOf = (item: Kinded) => catalogEntry(item.kind, item.asset)
+
+export const mountOf = (item: Kinded): Mount => entryOf(item)?.mount ?? 'floor'
+
+export const isSmall = (item: Kinded) => !!entryOf(item)?.small
 
 /** Height of the surface small items rest on when set on top of this item. */
-export const topOf = (item: Pick<FurnitureItem, 'kind' | 'size'>) => catalogEntry(item.kind)?.top ?? item.size.h
+export const topOf = (item: Kinded & Pick<FurnitureItem, 'size'>) => entryOf(item)?.top ?? item.size.h
 
 /** Items that nothing can be placed on (flat rugs, wall and ceiling items). */
 const NOT_SURFACES = new Set<FurnitureKind>(['rug', 'shagRug', 'floorMirror', 'plant', 'floorLamp', 'clothesRack', 'wardrobe', 'bookshelf'])
-export const isSurface = (item: Pick<FurnitureItem, 'kind'>) =>
+export const isSurface = (item: Kinded) =>
   mountOf(item) === 'floor' && !isSmall(item) && !NOT_SURFACES.has(item.kind)
 
 /** Items the tour camera can walk over. */
-export const isWalkable = (item: Pick<FurnitureItem, 'kind' | 'elevation'>) =>
+export const isWalkable = (item: Kinded & Pick<FurnitureItem, 'elevation'>) =>
   item.kind === 'rug' || item.kind === 'shagRug' || mountOf(item) !== 'floor' || item.elevation > 0

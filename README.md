@@ -20,6 +20,8 @@
    캔들·인형·스탠드 같은 소품은 떨어뜨린 가구 위에 올라간다.
    색·크기 변경, 내 3D 파일(.glb) 업로드, 사진 시점에서 보기, 사진 톤 필터와 화면 저장을 지원한다.
    "프린세스 룸 / 모던 로맨틱 / 프렌치 살롱" 버튼으로 방 모양에 맞춰 한 번에 꾸밀 수 있다.
+   "실물 스캔" 카테고리는 실제 가구를 3D 스캔한 모델(클래식 소파·암체어·콘솔·협탁, 샹들리에, 금장 액자,
+   화병, 탁상시계)이라 사진처럼 보인다. 놓을 때 그 모델만 내려받는다.
 4. **룸투어**: 방 안을 1인칭으로 걸어 다닌다. PC는 드래그 + WASD, 폰은 드래그 + 조이스틱.
 5. **사진처럼 만들기 (AI)**: 지금 보는 3D 화면을 설계도 삼아, 같은 구도·배치의 "진짜 찍은 사진"을 만든다.
    - 무료: 버튼 한 번에 3D 이미지가 복사되고 ChatGPT가 열린다. 붙여넣고 요청문도 붙여넣으면 끝. 받은 사진은
@@ -74,5 +76,9 @@ npm run build     # 타입 검사 + 프로덕션 빌드
 
 ## 서드파티 에셋
 
+스캔 가구를 바꾸거나 늘리려면 `scripts/fetch-models.mjs`의 목록을 고치고 `node scripts/fetch-models.mjs`를 실행한다.
+Poly Haven에서 받아 텍스처를 512px로 줄이고 meshopt로 압축해 `public/models/`와 `src/furniture/scanned.ts`를 만든다.
+
+- `public/models/*.json`: [Poly Haven](https://polyhaven.com) 3D 스캔 모델 (CC0): ArmChair 01, Sofa 01, Classic Console 01, Classic Nightstand 01, Chandelier 01·03, Fancy Picture Frame 01·02, Antique Ceramic Vase 01, Mantel Clock 01
 - `public/textures/*.jpg`: [Poly Haven](https://polyhaven.com) 재질 사진 (CC0): Laminate Floor 02, Beige Wall 001, Rough Linen, Velour Velvet, Marble 01
 - `public/weights/rt_ldr.json`: [Open Image Denoise](https://github.com/RenderKit/oidn-weights) `rt_ldr.tza` 가중치를 base64로 담은 것 (Apache-2.0, `public/weights/LICENSE.txt`)

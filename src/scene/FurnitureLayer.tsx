@@ -6,6 +6,7 @@ import { ProceduralModel } from '../furniture/models'
 
 // Uploaded .glb models need the glTF loader; it only downloads once a room actually has one.
 const CustomModel = lazy(() => import('../furniture/CustomModel').then((m) => ({ default: m.CustomModel })))
+const ScannedModel = lazy(() => import('../furniture/CustomModel').then((m) => ({ default: m.ScannedModel })))
 import { isSmall, mountOf } from '../furniture/catalog'
 import { placeAt, placeOnWall } from '../furniture/placement'
 import { useStore } from '../store'
@@ -96,10 +97,8 @@ export function FurnitureLayer({ room, items, editable, onDragChange }: {
           onPointerUp={onUp}
           onPointerCancel={onUp}
         >
-          {item.kind === 'custom' ? (
-            <Suspense fallback={null}>
-              <CustomModel item={item} />
-            </Suspense>
+          {item.kind === 'custom' || item.kind === 'scanned' ? (
+            <Suspense fallback={null}>{item.kind === 'custom' ? <CustomModel item={item} /> : <ScannedModel item={item} />}</Suspense>
           ) : (
             <ProceduralModel item={item} />
           )}
