@@ -13,6 +13,7 @@ export function PhotoProjection({ strength = 1 }: { strength?: number }) {
   const { photos, room } = useProject()
   const gl = useThree((s) => s.gl)
   const scene = useThree((s) => s.scene)
+  const invalidate = useThree((s) => s.invalidate)
 
   const active = useMemo(
     () => photos.filter((p) => p.projected && p.camera).slice(0, MAX_PHOTOS),
@@ -22,7 +23,7 @@ export function PhotoProjection({ strength = 1 }: { strength?: number }) {
   const passes = useMemo<Pass[]>(
     () =>
       active.map((p) => {
-        const texture = new THREE.TextureLoader().load(p.dataUrl)
+        const texture = new THREE.TextureLoader().load(p.dataUrl, () => invalidate())
         texture.colorSpace = THREE.SRGBColorSpace
         texture.anisotropy = 8
         const aspect = p.width / p.height

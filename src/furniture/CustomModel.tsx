@@ -1,7 +1,6 @@
 import { Suspense, useEffect, useMemo, useState } from 'react'
 import * as THREE from 'three'
 import { useGLTF } from '@react-three/drei'
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import type { FurnitureItem } from '../types'
 import { modelUrl, saveModel } from './modelStore'
 import { uid } from '../store'
@@ -12,6 +11,7 @@ import { uid } from '../store'
  */
 export async function importModelFile(file: File): Promise<{ modelId: string; size: FurnitureItem['size'] }> {
   const data = await file.arrayBuffer()
+  const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js')
   const gltf = await new GLTFLoader().parseAsync(data, '')
   const box = new THREE.Box3().setFromObject(gltf.scene)
   const s = box.getSize(new THREE.Vector3())

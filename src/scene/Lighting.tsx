@@ -4,23 +4,25 @@ import { useThree } from '@react-three/fiber'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import type { Room } from '../types'
 import { bounds, centroid, wallSegments } from '../geometry/plan'
-import { NO_TRACE } from '../render/photoreal'
+import { NO_TRACE } from '../render/traceFlags'
 
 /** Soft indoor light: an image-based fill, a skylight, and daylight coming in through the first window. */
 export function Lighting({ room, photoLit }: { room: Room; photoLit: boolean }) {
   const gl = useThree((s) => s.gl)
   const scene = useThree((s) => s.scene)
+  const invalidate = useThree((s) => s.invalidate)
 
   useEffect(() => {
     const pmrem = new THREE.PMREMGenerator(gl)
     const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture
     scene.environment = env
     scene.environmentIntensity = 0.35
+    invalidate()
     return () => {
       env.dispose()
       pmrem.dispose()
     }
-  }, [gl, scene])
+  }, [gl, scene, invalidate])
 
   const c = centroid(room.corners)
   const b = bounds(room.corners)

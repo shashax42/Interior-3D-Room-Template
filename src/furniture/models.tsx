@@ -1,10 +1,10 @@
-import { useEffect, useMemo, type ReactNode } from 'react'
+import { useMemo, type ReactNode } from 'react'
 import * as THREE from 'three'
 import { RoundedBox } from '@react-three/drei'
-import { Reflector } from 'three/examples/jsm/objects/Reflector.js'
 import type { FurnitureItem } from '../types'
 import { GOLD } from './catalog'
-import { Cotton, PrincessModel } from './princess'
+import { Cotton, Mirror, PrincessModel } from './princess'
+import { TRACE_TRANSMISSION } from '../render/traceFlags'
 
 // Every model is built inside the box [-w/2, w/2] × [0, h] × [-d/2, d/2], with its front facing +z.
 
@@ -272,22 +272,6 @@ function ClothesRack({ item }: P) {
   )
 }
 
-/** A real mirror: renders the room reflected in it, so you can see yourself-in-the-room during the tour. */
-function MirrorGlass({ w, h }: { w: number; h: number }) {
-  const mirror = useMemo(
-    () =>
-      new Reflector(new THREE.PlaneGeometry(w, h), {
-        textureWidth: 512,
-        textureHeight: Math.round((512 * h) / w),
-        color: new THREE.Color('#d9dcdc'),
-        clipBias: 0.003,
-      }),
-    [w, h],
-  )
-  useEffect(() => () => mirror.dispose(), [mirror])
-  return <primitive object={mirror} />
-}
-
 function FloorMirror({ item }: P) {
   const { w, d, h } = item.size
   const f = 0.06
@@ -295,7 +279,7 @@ function FloorMirror({ item }: P) {
     <group rotation={[-0.08, 0, 0]} position={[0, 0, 0.06]}>
       <Box size={[w, h, d]} position={[0, h / 2, 0]} radius={0.015}><Metal color={item.color} /></Box>
       <group position={[0, h / 2, d / 2 + 0.002]}>
-        <MirrorGlass w={w - f * 2} h={h - f * 2} />
+        <Mirror w={w - f * 2} h={h - f * 2} />
       </group>
       {/* Crest */}
       <mesh position={[0, h - 0.01, 0]} castShadow>
@@ -372,7 +356,7 @@ function Chandelier({ item }: P) {
       {drops.map((p, i) => (
         <mesh key={i} position={[p.x, p.y, p.z]}>
           <octahedronGeometry args={[0.025]} />
-          <meshPhysicalMaterial color={item.accent} roughness={0.02} metalness={0} transmission={0.9} thickness={0.03} ior={1.6} />
+          <meshPhysicalMaterial color={item.accent} roughness={0.02} metalness={0} transparent opacity={0.6} ior={1.6} userData={{ [TRACE_TRANSMISSION]: 0.9 }} />
         </mesh>
       ))}
       <pointLight position={[0, armY + 0.05, 0]} intensity={4} distance={7} decay={2} color="#ffdcae" />

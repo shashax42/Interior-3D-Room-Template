@@ -11,6 +11,7 @@ import { Lighting } from './Lighting'
 import { PhotoProjection } from './PhotoProjection'
 import { TourControls } from './TourControls'
 import { lookById } from './filters'
+import { surfacesReady } from './materials'
 
 export type ViewMode = 'orbit' | 'tour'
 type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
@@ -18,6 +19,7 @@ type OrbitControlsImpl = ComponentRef<typeof OrbitControls>
 function OrbitRig({ enabled, photo }: { enabled: boolean; photo: RoomPhoto | null }) {
   const room = useStore((s) => s.project.room)
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera
+  const invalidate = useThree((s) => s.invalidate)
   const aspect = useThree((s) => s.size.width / Math.max(1, s.size.height))
   const controls = useRef<OrbitControlsImpl>(null)
   const c = centroid(room.corners)
@@ -48,6 +50,7 @@ function OrbitRig({ enabled, photo }: { enabled: boolean; photo: RoomPhoto | nul
       controls.current?.target.set(c.x, 0.6, c.z)
     }
     controls.current?.update()
+    invalidate()
     // Small room edits should not move the camera; switching viewpoints or reshaping the room does.
   }, [photo, camera, boundsKey, aspect > 1])
 
@@ -93,6 +96,35 @@ function CaptureBridge({ capture }: { capture?: MutableRefObject<ViewHandle | nu
   return null
 }
 
+/**
+ * Keeps the GPU idle when nothing changes. Outside the tour the view is only redrawn on demand (camera moves,
+ * edits, loaded textures), and the shadow map is recomputed only when the room or furniture change, not on
+ * every camera move.
+ */
+function RenderBudget({ room, furniture }: { room: unknown; furniture: unknown }) {
+  const gl = useThree((s) => s.gl)
+  const invalidate = useThree((s) => s.invalidate)
+  useEffect(() => {
+    gl.shadowMap.autoUpdate = false
+  }, [gl])
+  useEffect(() => {
+    gl.shadowMap.needsUpdate = true
+    invalidate()
+  }, [gl, room, furniture, invalidate])
+  useEffect(() => {
+    let alive = true
+    surfacesReady().then(() => {
+      if (!alive) return
+      gl.shadowMap.needsUpdate = true
+      invalidate()
+    })
+    return () => {
+      alive = false
+    }
+  }, [gl, invalidate])
+  return null
+}
+
 /** Where the tour starts: just inside the first door, or the middle of the room. */
 function tourStart(room: ReturnType<typeof useStore.getState>['project']['room']): Vec2 | undefined {
   const door = room.openings.find((o) => o.kind === 'door')
@@ -124,7 +156,9 @@ export function Viewport({ mode, editable, photoView, lookId = 'none', capture }
     <div className="viewport">
       <Canvas
         shadows
-        dpr={[1, 2]}
+        frameloop={mode === 'tour' ? 'always' : 'demand'}
+        // Retina screens at full 2x cost four times the pixels; 1.5x looks nearly as sharp.
+        dpr={[1, 1.5]}
         gl={{ antialias: true, preserveDrawingBuffer: true }}
         camera={{ fov: 45, near: 0.03, far: 200 }}
         onCreated={({ gl }) => {
@@ -152,6 +186,7 @@ export function Viewport({ mode, editable, photoView, lookId = 'none', capture }
           <TourControls room={room} furniture={furniture} start={start} />
         )}
         <CaptureBridge capture={capture} />
+        <RenderBudget room={room} furniture={furniture} />
       </Canvas>
       {look.vignette > 0 && <div className="vignette" style={{ opacity: look.vignette / 0.4 }} />}
     </div>

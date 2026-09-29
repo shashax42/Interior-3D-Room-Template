@@ -5,13 +5,12 @@ import type { FurnitureItem, RoomPhoto } from '../types'
 import { CATALOG, CATEGORIES, isSmall, mountOf, type CatalogEntry, type Category } from '../furniture/catalog'
 import { PRESETS, newItem, type Preset } from '../furniture/presets'
 import { initialPlacement } from '../furniture/placement'
-import { importModelFile } from '../furniture/CustomModel'
 import { centroid } from '../geometry/plan'
 import { Viewport, type ViewHandle } from '../scene/Viewport'
 import { LOOKS, captureWithLook, lookById } from '../scene/filters'
 import { CmField, ColorField, Section } from '../ui/fields'
 import { saveImage } from '../ui/SaveSheet'
-import { PhotorealOverlay } from '../render/PhotorealOverlay'
+import { PhotorealOverlay } from '../render/lazy'
 import { AiPhotoOverlay } from '../render/AiPhotoOverlay'
 import { snapshotForAi } from '../render/aiPhoto'
 import { GallerySection } from '../render/Gallery'
@@ -122,6 +121,7 @@ export function DecorateStep({ photoView, setPhotoView, capture, lookId, setLook
     setUploading(true)
     setUploadError(null)
     try {
+      const { importModelFile } = await import('../furniture/CustomModel')
       const { modelId, size } = await importModelFile(file)
       checkpoint()
       const id = addFurniture({

@@ -2,10 +2,10 @@ import { useEffect, useMemo, useRef, type ReactNode } from 'react'
 import * as THREE from 'three'
 import { useFrame } from '@react-three/fiber'
 import { RoundedBox } from '@react-three/drei'
-import { Reflector } from 'three/examples/jsm/objects/Reflector.js'
 import type { FurnitureItem } from '../types'
 import { GOLD } from './catalog'
 import { surfaces } from '../scene/materials'
+import { TRACE_MIRROR, TRACE_TRANSMISSION } from '../render/traceFlags'
 
 // The princess / French room kit. Same conventions as models.tsx: each model fills
 // [-w/2, w/2] × [0, h] × [-d/2, d/2] and faces +z.
@@ -153,18 +153,17 @@ function Pillow({ w, h, d, position, color, rotation }: { w: number; h: number; 
   )
 }
 
-function Mirror({ w, h, round }: { w: number; h: number; round?: boolean }) {
-  const mirror = useMemo(() => {
-    const geo = round ? new THREE.CircleGeometry(0.5, 48).scale(w, h, 1) : new THREE.PlaneGeometry(w, h)
-    return new Reflector(geo, {
-      textureWidth: 512,
-      textureHeight: Math.round((512 * h) / w),
-      color: new THREE.Color('#d9dcdc'),
-      clipBias: 0.003,
-    })
-  }, [w, h, round])
-  useEffect(() => () => mirror.dispose(), [mirror])
-  return <primitive object={mirror} />
+/**
+ * Mirror glass. Realtime shows polished metal reflecting the surroundings (a true mirror would redraw the whole
+ * room again every frame); the photoreal render turns it into a perfect mirror.
+ */
+export function Mirror({ w, h, round }: { w: number; h: number; round?: boolean }) {
+  return (
+    <mesh userData={{ [TRACE_MIRROR]: true }} scale={round ? [w, h, 1] : [1, 1, 1]}>
+      {round ? <circleGeometry args={[0.5, 48]} /> : <planeGeometry args={[w, h]} />}
+      <meshStandardMaterial color="#e7ecee" metalness={1} roughness={0.04} />
+    </mesh>
+  )
 }
 
 /** An elliptical ring (a torus squashed into an oval) in the xy plane. */
@@ -466,7 +465,7 @@ function Candles({ item }: P) {
         <group key={i} position={[c.x, 0.012, c.z]}>
           <mesh position={[0, c.ch / 2, 0]} castShadow>
             <cylinderGeometry args={[c.r, c.r, c.ch, 24]} />
-            <meshPhysicalMaterial color={item.color} roughness={0.6} transmission={0.2} thickness={0.05} />
+            <meshPhysicalMaterial color={item.color} roughness={0.6} userData={{ [TRACE_TRANSMISSION]: 0.2 }} />
           </mesh>
           <Flame position={[0, c.ch + 0.014, 0]} seed={i} />
         </group>
@@ -740,7 +739,17 @@ function BubbleChandelier({ item }: P) {
       {bubbles.map((b, i) => (
         <mesh key={i} position={[b.x, b.y, b.z]}>
           <sphereGeometry args={[b.s, 24, 16]} />
-          <meshPhysicalMaterial color={item.accent} roughness={0.35} transmission={0.6} thickness={0.2} ior={1.4} emissive="#fff4e0" emissiveIntensity={0.35} />
+          <meshPhysicalMaterial
+            color={item.accent}
+            roughness={0.25}
+            transparent
+            opacity={0.55}
+            thickness={0.2}
+            ior={1.4}
+            emissive="#fff4e0"
+            emissiveIntensity={0.35}
+            userData={{ [TRACE_TRANSMISSION]: 0.6 }}
+          />
         </mesh>
       ))}
       <pointLight position={[0, h * 0.28, 0]} intensity={4.5} distance={7} decay={2} color="#ffe2b8" />

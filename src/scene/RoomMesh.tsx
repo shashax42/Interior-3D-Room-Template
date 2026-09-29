@@ -5,7 +5,7 @@ import type { FurnitureItem, Opening, Room } from '../types'
 import { isConvexCorner, wallSegments, type WallSegment } from '../geometry/plan'
 import { ROOM_LAYER, withPhotoProjection } from './projectionShader'
 import { surfaces } from './materials'
-import { NO_TRACE } from '../render/photoreal'
+import { NO_TRACE } from '../render/traceFlags'
 import { Medallions, defaultTrim, wallTrimGeometry } from './Trim'
 
 /** Matrix that maps wall-local coordinates (x along the wall, y up, z into the room) to world space. */

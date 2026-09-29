@@ -9,10 +9,11 @@ function PanoView({ pano, others, onGo }: { pano: Panorama; others: Panorama[]; 
   const camera = useThree((s) => s.camera) as THREE.PerspectiveCamera
   const scene = useThree((s) => s.scene)
   const dom = useThree((s) => s.gl.domElement)
+  const invalidate = useThree((s) => s.invalidate)
   const look = useRef({ yaw: 0, pitch: 0 })
 
   const texture = useMemo(() => {
-    const t = new THREE.TextureLoader().load(pano.dataUrl)
+    const t = new THREE.TextureLoader().load(pano.dataUrl, () => invalidate())
     t.mapping = THREE.EquirectangularReflectionMapping
     t.colorSpace = THREE.SRGBColorSpace
     return t
@@ -24,7 +25,8 @@ function PanoView({ pano, others, onGo }: { pano: Panorama; others: Panorama[]; 
 
   useEffect(() => {
     camera.position.set(pano.position.x, pano.position.y, pano.position.z)
-  }, [camera, pano])
+    invalidate()
+  }, [camera, pano, invalidate])
 
   useEffect(() => {
     let drag: { x: number; y: number } | null = null
@@ -37,6 +39,7 @@ function PanoView({ pano, others, onGo }: { pano: Panorama; others: Panorama[]; 
       look.current.yaw -= (e.clientX - drag.x) * k
       look.current.pitch = Math.max(-1.35, Math.min(1.35, look.current.pitch - (e.clientY - drag.y) * k))
       drag = { x: e.clientX, y: e.clientY }
+      invalidate()
     }
     const up = () => {
       drag = null
@@ -44,6 +47,7 @@ function PanoView({ pano, others, onGo }: { pano: Panorama; others: Panorama[]; 
     const wheel = (e: WheelEvent) => {
       camera.fov = Math.max(35, Math.min(95, camera.fov + e.deltaY * 0.03))
       camera.updateProjectionMatrix()
+      invalidate()
     }
     dom.addEventListener('pointerdown', down)
     window.addEventListener('pointermove', move)
@@ -55,7 +59,7 @@ function PanoView({ pano, others, onGo }: { pano: Panorama; others: Panorama[]; 
       window.removeEventListener('pointerup', up)
       dom.removeEventListener('wheel', wheel)
     }
-  }, [camera, dom])
+  }, [camera, dom, invalidate])
 
   useFrame(() => {
     camera.rotation.set(-look.current.pitch, -look.current.yaw, 0, 'YXZ')
@@ -123,7 +127,7 @@ export function PanoTour({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="pano-tour">
-      <Canvas camera={{ fov: 75, near: 0.05, far: 100 }} style={{ touchAction: 'none' }}>
+      <Canvas frameloop="demand" dpr={[1, 1.5]} camera={{ fov: 75, near: 0.05, far: 100 }} style={{ touchAction: 'none' }}>
         <PanoView pano={current} others={panoramas.filter((p) => p.id !== current.id)} onGo={go} />
       </Canvas>
       <div className={fading ? 'pano-fade on' : 'pano-fade'} />

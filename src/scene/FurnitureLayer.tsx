@@ -1,13 +1,15 @@
-import { useRef } from 'react'
+import { lazy, Suspense, useRef } from 'react'
 import * as THREE from 'three'
 import type { ThreeEvent } from '@react-three/fiber'
 import type { FurnitureItem, Room } from '../types'
 import { ProceduralModel } from '../furniture/models'
-import { CustomModel } from '../furniture/CustomModel'
+
+// Uploaded .glb models need the glTF loader; it only downloads once a room actually has one.
+const CustomModel = lazy(() => import('../furniture/CustomModel').then((m) => ({ default: m.CustomModel })))
 import { isSmall, mountOf } from '../furniture/catalog'
 import { placeAt, placeOnWall } from '../furniture/placement'
 import { useStore } from '../store'
-import { NO_TRACE } from '../render/photoreal'
+import { NO_TRACE } from '../render/traceFlags'
 
 function SelectionBox({ item }: { item: FurnitureItem }) {
   const { w, d, h } = item.size
@@ -94,7 +96,13 @@ export function FurnitureLayer({ room, items, editable, onDragChange }: {
           onPointerUp={onUp}
           onPointerCancel={onUp}
         >
-          {item.kind === 'custom' ? <CustomModel item={item} /> : <ProceduralModel item={item} />}
+          {item.kind === 'custom' ? (
+            <Suspense fallback={null}>
+              <CustomModel item={item} />
+            </Suspense>
+          ) : (
+            <ProceduralModel item={item} />
+          )}
           {editable && selection?.type === 'furniture' && selection.id === item.id && <SelectionBox item={item} />}
         </group>
       ))}

@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { EquirectCamera, GradientEquirectTexture, ShapedAreaLight, WebGLPathTracer } from 'three-gpu-pathtracer'
+import { NO_TRACE, TRACE_MIRROR, TRACE_TRANSMISSION } from './traceFlags'
 
 /**
  * Photoreal rendering by path tracing: light is traced as it really travels — through the windows, bouncing off
@@ -11,15 +12,20 @@ import { EquirectCamera, GradientEquirectTexture, ShapedAreaLight, WebGLPathTrac
  * the realtime-only fill lights are left out.
  */
 
-/** Objects (and their children) with this flag are not part of the photo: selection boxes, fake fill lights. */
-export const NO_TRACE = 'noTrace'
-
 const mirrorMaterial = new THREE.MeshStandardMaterial({ color: '#f4f6f6', metalness: 1, roughness: 0.015 })
 
 function traceMaterial(obj: THREE.Mesh): THREE.Material | null {
-  if ((obj as unknown as { isReflector?: boolean }).isReflector) return mirrorMaterial
+  if ((obj as unknown as { isReflector?: boolean }).isReflector || obj.userData[TRACE_MIRROR]) return mirrorMaterial
   const m = obj.material as THREE.Material
   if (Array.isArray(obj.material)) return null
+  const transmission = m.userData[TRACE_TRANSMISSION] as number | undefined
+  if (transmission !== undefined && (m as THREE.MeshPhysicalMaterial).isMeshPhysicalMaterial) {
+    const glass = (m as THREE.MeshPhysicalMaterial).clone()
+    glass.transmission = transmission
+    glass.transparent = false
+    glass.opacity = 1
+    return glass
+  }
   if ((m as THREE.MeshStandardMaterial).isMeshStandardMaterial) return m
   if ((m as THREE.MeshBasicMaterial).isMeshBasicMaterial) {
     const basic = m as THREE.MeshBasicMaterial

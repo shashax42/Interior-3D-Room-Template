@@ -35,7 +35,7 @@ function tex(file: string, repeat: number, color = false) {
 function detail(file: string, repeat: number, strength: number) {
   // The canvas keeps one fixed size: WebGL texture storage can't change size once uploaded, and a texture that
   // grew after its first upload renders black (and breaks the photoreal renderer).
-  const size = 1024
+  const size = 512
   const canvas = document.createElement('canvas')
   canvas.width = canvas.height = size
   const ctx = canvas.getContext('2d', { willReadFrequently: true })!
