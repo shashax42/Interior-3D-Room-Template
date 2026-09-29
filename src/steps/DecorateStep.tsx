@@ -14,6 +14,7 @@ import { saveImage } from '../ui/SaveSheet'
 import { PhotorealOverlay } from '../render/PhotorealOverlay'
 import { AiPhotoOverlay } from '../render/AiPhotoOverlay'
 import { snapshotForAi } from '../render/aiPhoto'
+import { GallerySection } from '../render/Gallery'
 
 function ItemPanel({ item }: { item: FurnitureItem }) {
   const room = useStore((s) => s.project.room)
@@ -221,6 +222,8 @@ export function DecorateStep({ photoView, setPhotoView, capture, lookId, setLook
             ))}
           </div>
         </Section>
+
+        <GallerySection />
 
         <Section title="사진으로 뽑기">
           <div className="seg small">

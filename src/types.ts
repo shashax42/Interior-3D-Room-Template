@@ -140,6 +140,14 @@ export type Panorama = {
   dataUrl: string
 }
 
+/** A photograph made from the 3D view (by ChatGPT, Gemini or the API), kept with the view it was made from. */
+export type GalleryPhoto = {
+  id: string
+  photo: string
+  layout: string
+  createdAt: number
+}
+
 export type Project = {
   room: Room
   planImage: PlanImage | null
@@ -147,4 +155,6 @@ export type Project = {
   furniture: FurnitureItem[]
   /** Missing in projects saved before the VR tour existed. */
   panoramas?: Panorama[]
+  /** Missing in projects saved before the gallery existed. */
+  gallery?: GalleryPhoto[]
 }

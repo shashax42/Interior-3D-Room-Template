@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware'
 import { del, get, set } from 'idb-keyval'
-import type { FurnitureItem, Opening, Panorama, PlanImage, Project, Room, RoomPhoto, Vec2 } from './types'
+import type { FurnitureItem, GalleryPhoto, Opening, Panorama, PlanImage, Project, Room, RoomPhoto, Vec2 } from './types'
 import { clampOpening, normalizeWinding, rectangleCorners } from './geometry/plan'
 import { PRESETS } from './furniture/presets'
 
@@ -77,6 +77,9 @@ type State = {
 
   addPanorama: (p: Omit<Panorama, 'id'>) => string
   removePanorama: (id: string) => void
+
+  addToGallery: (g: Omit<GalleryPhoto, 'id' | 'createdAt'>) => void
+  removeFromGallery: (id: string) => void
 }
 
 const HISTORY = 60
@@ -182,6 +185,10 @@ export const useStore = create<State>()(
           return id
         },
         removePanorama: (id) => mutate((p) => ({ ...p, panoramas: (p.panoramas ?? []).filter((x) => x.id !== id) })),
+
+        addToGallery: (g) =>
+          mutate((p) => ({ ...p, gallery: [{ ...g, id: uid(), createdAt: Date.now() }, ...(p.gallery ?? [])] })),
+        removeFromGallery: (id) => mutate((p) => ({ ...p, gallery: (p.gallery ?? []).filter((x) => x.id !== id) })),
       }
     },
     {

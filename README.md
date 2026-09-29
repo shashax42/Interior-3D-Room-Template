@@ -21,9 +21,11 @@
    색·크기 변경, 내 3D 파일(.glb) 업로드, 사진 시점에서 보기, 사진 톤 필터와 화면 저장을 지원한다.
    "프린세스 룸 / 모던 로맨틱 / 프렌치 살롱" 버튼으로 방 모양에 맞춰 한 번에 꾸밀 수 있다.
 4. **룸투어**: 방 안을 1인칭으로 걸어 다닌다. PC는 드래그 + WASD, 폰은 드래그 + 조이스틱.
-5. **사진처럼 만들기 (AI)**: 지금 보는 3D 화면을 설계도 삼아, OpenAI 이미지 모델이 같은 구도·배치의
-   "진짜 찍은 사진"을 만든다. 실제 방 사진 시점에서 누르면 그 사진 속 방에 가구를 들인 사진이 된다.
-   3D와 결과를 좌우로 밀어 비교할 수 있다. `.env.local`에 `OPENAI_API_KEY`가 필요하다(`.env.example` 참고).
+5. **사진처럼 만들기 (AI)**: 지금 보는 3D 화면을 설계도 삼아, 같은 구도·배치의 "진짜 찍은 사진"을 만든다.
+   - 무료: 버튼 한 번에 3D 이미지가 복사되고 ChatGPT가 열린다. 붙여넣고 요청문도 붙여넣으면 끝. 받은 사진은
+     ⌘V로 앱에 붙여넣으면 "내 실사 사진" 갤러리에 모이고 3D와 밀어서 비교할 수 있다.
+   - 자동(유료): `.env.local`에 `OPENAI_API_KEY`를 넣으면 앱 안에서 바로 만든다(`.env.example` 참고).
+   실제 방 사진 시점에서 누르면 그 사진 속 방에 가구를 들인 사진으로 요청한다.
 6. **실사 렌더 / VR 투어**: "✨ 실사 사진"은 지금 보는 장면을 패스 트레이싱으로 렌더한다. 창문으로 들어오는
    햇빛과 벽·바닥에 튕기는 빛까지 계산하고, AI 노이즈 제거(Open Image Denoise, WebGPU)로 마무리한다.
    "📷 여기서 360° 찍기"로 자리마다 360° 실사 사진을 찍으면, "🥽 VR 투어"에서 부동산 VR 투어처럼
@@ -72,4 +74,5 @@ npm run build     # 타입 검사 + 프로덕션 빌드
 
 ## 서드파티 에셋
 
+- `public/textures/*.jpg`: [Poly Haven](https://polyhaven.com) 재질 사진 (CC0): Laminate Floor 02, Beige Wall 001, Rough Linen, Velour Velvet, Marble 01
 - `public/weights/rt_ldr.json`: [Open Image Denoise](https://github.com/RenderKit/oidn-weights) `rt_ldr.tza` 가중치를 base64로 담은 것 (Apache-2.0, `public/weights/LICENSE.txt`)

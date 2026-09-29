@@ -4,7 +4,7 @@ import { useFrame, type ThreeEvent } from '@react-three/fiber'
 import type { FurnitureItem, Opening, Room } from '../types'
 import { isConvexCorner, wallSegments, type WallSegment } from '../geometry/plan'
 import { ROOM_LAYER, withPhotoProjection } from './projectionShader'
-import { plankTexture } from './textures'
+import { surfaces } from './materials'
 import { NO_TRACE } from '../render/photoreal'
 import { Medallions, defaultTrim, wallTrimGeometry } from './Trim'
 
@@ -136,8 +136,11 @@ export function RoomMesh({ room, furniture = [], cutaway, selectedOpening, onWal
   const trim = room.trim ?? defaultTrim()
   const walls = useMemo(() => wallSegments(room.corners), [room.corners])
 
-  const wallMat = useMemo(() => withPhotoProjection(new THREE.MeshStandardMaterial()), [])
-  const floorMat = useMemo(() => withPhotoProjection(new THREE.MeshStandardMaterial({ map: plankTexture() })), [])
+  const wallMat = useMemo(
+    () => withPhotoProjection(new THREE.MeshStandardMaterial({ normalMap: surfaces().wall.normalMap, normalScale: new THREE.Vector2(0.35, 0.35) })),
+    [],
+  )
+  const floorMat = useMemo(() => withPhotoProjection(new THREE.MeshStandardMaterial({ ...surfaces().floor })), [])
   const ceilMat = useMemo(() => withPhotoProjection(new THREE.MeshStandardMaterial()), [])
   useEffect(() => {
     wallMat.color.set(room.wall.color)

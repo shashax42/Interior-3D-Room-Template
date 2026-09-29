@@ -8,7 +8,7 @@ type State = { kind: 'idle' } | { kind: 'loading' } | { kind: 'done'; image: str
 type Mode = 'free' | 'api'
 
 /** Drag the divider to compare the 3D layout with the photograph. */
-function Compare({ before, after }: { before: string; after: string }) {
+export function Compare({ before, after }: { before: string; after: string }) {
   const [x, setX] = useState(50)
   const box = useRef<HTMLDivElement>(null)
   const move = (clientX: number) => {
@@ -63,7 +63,7 @@ export function AiPhotoOverlay({ layout, roomPhoto, width, height, onClose }: {
   const runApi = async () => {
     setState({ kind: 'loading' })
     try {
-      setState({ kind: 'done', image: await requestAiPhoto({ layout, roomPhoto, prompt, width, height }) })
+      keep(await requestAiPhoto({ layout, roomPhoto, prompt, width, height }))
     } catch (e) {
       if (e instanceof MissingKeyError) setState({ kind: 'no-key' })
       else setState({ kind: 'error', message: (e as Error).message })
@@ -81,10 +81,25 @@ export function AiPhotoOverlay({ layout, roomPhoto, width, height, onClose }: {
     }
   }
 
-  const loadResult = async (file: File) => {
-    const img = await readImage(file, 2400)
-    setState({ kind: 'done', image: img.dataUrl })
+  const addToGallery = useStore((s) => s.addToGallery)
+  const keep = (image: string) => {
+    setState({ kind: 'done', image })
+    addToGallery({ photo: image, layout })
   }
+
+  const loadResult = async (file: File) => keep((await readImage(file, 2400)).dataUrl)
+
+  // Pasting the photo copied from ChatGPT works as well as picking a file.
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      const file = [...(e.clipboardData?.files ?? [])].find((f) => f.type.startsWith('image/'))
+      if (!file) return
+      e.preventDefault()
+      void loadResult(file)
+    }
+    window.addEventListener('paste', onPaste)
+    return () => window.removeEventListener('paste', onPaste)
+  })
 
   return (
     <div className="ai-overlay" role="dialog" aria-label="사진처럼 만들기">
@@ -126,41 +141,37 @@ export function AiPhotoOverlay({ layout, roomPhoto, width, height, onClose }: {
         {mode === 'free' ? (
           <ol className="ai-steps">
             <li>
-              <span>3D 이미지 복사 (또는 저장)</span>
+              <a
+                className="btn primary big"
+                href="https://chatgpt.com/"
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => {
+                  copyImage(layout)
+                    .then(() => setImgCopied('ok'))
+                    .catch(() => setImgCopied('fail'))
+                }}
+              >
+                3D 이미지 복사하고 ChatGPT 열기
+              </a>
+              <span>
+                {imgCopied === 'fail'
+                  ? '복사가 막혀 있어요. 아래 "이미지 저장"으로 저장한 뒤 ChatGPT에 첨부해주세요.'
+                  : '열린 ChatGPT 입력창에 ⌘V(폰은 길게 눌러 붙여넣기)로 이미지를 붙여넣어요.'}
+              </span>
               <div className="row wrap">
-                <button
-                  className="btn"
-                  onClick={() =>
-                    copyImage(layout)
-                      .then(() => setImgCopied('ok'))
-                      .catch(() => {
-                        setImgCopied('fail')
-                        saveImage(layout, `${name}-3d.jpg`)
-                      })
-                  }
-                >
-                  {imgCopied === 'ok' ? '복사됨 ✓' : '3D 이미지 복사'}
-                </button>
-                <button className="btn" onClick={() => saveImage(layout, `${name}-3d.jpg`)}>저장</button>
-                {roomPhoto && (
-                  <button className="btn" onClick={() => saveImage(roomPhoto, `${name}-room.jpg`)}>실제 방 사진 저장</button>
-                )}
+                <button className="btn" onClick={() => saveImage(layout, `${name}-3d.jpg`)}>이미지 저장</button>
+                {roomPhoto && <button className="btn" onClick={() => saveImage(roomPhoto, `${name}-room.jpg`)}>실제 방 사진 저장</button>}
               </div>
             </li>
             <li>
-              <span>요청문 복사</span>
-              <button className="btn" onClick={copyPrompt}>{copied ? '복사됨 ✓' : '요청문 복사하기'}</button>
+              <button className="btn primary big" onClick={copyPrompt}>{copied ? '복사됨 ✓' : '요청문 복사'}</button>
+              <span>ChatGPT에 요청문도 붙여넣고 보내요. 무료 계정은 하루에 만들 수 있는 이미지 수가 정해져 있어요.</span>
             </li>
             <li>
-              <span>
-                <a href="https://chatgpt.com/" target="_blank" rel="noreferrer">ChatGPT</a>나{' '}
-                <a href="https://gemini.google.com/" target="_blank" rel="noreferrer">Gemini</a>를 열고, 이미지{roomPhoto ? ' 2장' : ''}을 붙여넣거나 첨부한 뒤 요청문을 붙여넣어 보내요. 무료 계정은 하루에 만들 수 있는 이미지 수가 정해져 있어요.
-              </span>
-            </li>
-            <li>
-              <span>받은 사진을 저장해서 여기로 불러오면 3D와 비교할 수 있어요.</span>
               <input ref={fileRef} type="file" accept="image/*" hidden onChange={(e) => e.target.files?.[0] && loadResult(e.target.files[0])} />
-              <button className="btn primary" onClick={() => fileRef.current?.click()}>받은 사진 불러오기</button>
+              <button className="btn primary big" onClick={() => fileRef.current?.click()}>받은 사진 불러오기</button>
+              <span>ChatGPT가 만든 사진을 복사해서 여기서 ⌘V로 붙여넣어도 돼요. 갤러리에 모이고, 3D와 밀어서 비교할 수 있어요.</span>
             </li>
           </ol>
         ) : (

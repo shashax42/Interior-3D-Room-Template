@@ -35,17 +35,22 @@ export function saveImage(dataUrl: string, filename: string) {
   a.click()
 }
 
-/** Puts an image on the clipboard (as PNG, the one image type browsers accept there). */
-export async function copyImage(dataUrl: string) {
-  const img = new Image()
-  img.src = dataUrl
-  await img.decode()
-  const c = document.createElement('canvas')
-  c.width = img.naturalWidth
-  c.height = img.naturalHeight
-  c.getContext('2d')!.drawImage(img, 0, 0)
-  const blob = await new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('no blob'))), 'image/png'))
-  await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+/**
+ * Puts an image on the clipboard as PNG (the one image type browsers accept there). The clipboard write starts
+ * right away with a promised blob, so it still counts as part of the click even though converting takes a moment.
+ */
+export function copyImage(dataUrl: string) {
+  const png = (async () => {
+    const img = new Image()
+    img.src = dataUrl
+    await img.decode()
+    const c = document.createElement('canvas')
+    c.width = img.naturalWidth
+    c.height = img.naturalHeight
+    c.getContext('2d')!.drawImage(img, 0, 0)
+    return new Promise<Blob>((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('no blob'))), 'image/png'))
+  })()
+  return navigator.clipboard.write([new ClipboardItem({ 'image/png': png })])
 }
 
 export function SaveSheet() {

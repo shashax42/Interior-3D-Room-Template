@@ -5,6 +5,7 @@ import { RoundedBox } from '@react-three/drei'
 import { Reflector } from 'three/examples/jsm/objects/Reflector.js'
 import type { FurnitureItem } from '../types'
 import { GOLD } from './catalog'
+import { surfaces } from '../scene/materials'
 
 // The princess / French room kit. Same conventions as models.tsx: each model fills
 // [-w/2, w/2] × [0, h] × [-d/2, d/2] and faces +z.
@@ -17,11 +18,28 @@ const darken = (hex: string, k: number) => '#' + new THREE.Color(hex).lerp(new T
 
 /** Soft cotton / linen with a faint sheen at grazing angles. */
 export const Cotton = ({ color }: { color: string }) => (
-  <meshPhysicalMaterial color={color} roughness={0.92} sheen={0.5} sheenRoughness={0.6} sheenColor="#ffffff" />
+  <meshPhysicalMaterial
+    color={color}
+    map={surfaces().linen.map}
+    normalMap={surfaces().linen.normalMap}
+    normalScale={[0.6, 0.6]}
+    roughness={0.92}
+    sheen={0.5}
+    sheenRoughness={0.6}
+    sheenColor="#ffffff"
+  />
 )
 /** Velvet: dark in the middle, glowing at the edges. */
 export const Velvet = ({ color }: { color: string }) => (
-  <meshPhysicalMaterial color={color} roughness={0.85} sheen={1} sheenRoughness={0.35} sheenColor={lighten(color, 0.55)} />
+  <meshPhysicalMaterial
+    color={color}
+    normalMap={surfaces().velvet.normalMap}
+    normalScale={[0.8, 0.8]}
+    roughness={0.85}
+    sheen={1}
+    sheenRoughness={0.35}
+    sheenColor={lighten(color, 0.55)}
+  />
 )
 const Satin = ({ color }: { color: string }) => (
   <meshPhysicalMaterial color={color} roughness={0.35} sheen={0.8} sheenRoughness={0.2} sheenColor="#ffffff" clearcoat={0.2} />
@@ -31,7 +49,17 @@ const Tulle = ({ color, opacity = 0.45 }: { color: string; opacity?: number }) =
 )
 const Gilt = ({ color = GOLD }: { color?: string }) => <meshStandardMaterial color={color} metalness={1} roughness={0.25} />
 const Paint = ({ color }: { color: string }) => <meshStandardMaterial color={color} roughness={0.45} />
-const Marble = ({ color }: { color: string }) => <meshPhysicalMaterial color={color} roughness={0.2} clearcoat={0.6} clearcoatRoughness={0.15} />
+const Marble = ({ color }: { color: string }) => (
+  <meshPhysicalMaterial
+    color={color}
+    map={surfaces().marble.map}
+    normalMap={surfaces().marble.normalMap}
+    normalScale={[0.3, 0.3]}
+    roughness={0.2}
+    clearcoat={0.6}
+    clearcoatRoughness={0.15}
+  />
+)
 
 function RBox({ size, position, radius = 0.02, rotation, children }: { size: V3; position: V3; radius?: number; rotation?: V3; children: ReactNode }) {
   return (
